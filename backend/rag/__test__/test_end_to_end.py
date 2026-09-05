@@ -8,6 +8,7 @@ from synthesis import synthesize_insight
 load_dotenv()
 
 
+# Runs retrieval + synthesis against the live DB and prints the result so the full pipeline can be smoke-tested end to end.
 def run_db_to_synthesis_test(
     test_query: str, top_candidates: int = 10, top_reranked: int = 4
 ):
@@ -16,7 +17,7 @@ def run_db_to_synthesis_test(
     print(f"Query: '{test_query}'")
     print("=" * 60)
 
-    # 1. Fetch chunks from live Qdrant + BM25 + Cohere Rerank
+    # 1. Fetch chunks from live Qdrant dense search + Cohere Rerank
     try:
         reranked_chunks = pipeline.retrieve_and_rerank(
             query=test_query, top_k=top_reranked

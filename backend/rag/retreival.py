@@ -13,6 +13,7 @@ load_dotenv()
 
 
 class RetrievalPipeline:
+    # Wires Qdrant + serverless HF embeddings + Cohere rerank so a query can be turned into ranked evidence.
     def __init__(self, collection_name: str = "COURSEERA_ALMAX_MULTIMODAL"):
         self.collection_name = collection_name
         self.qdrant_url = os.getenv("QDRANT_URL")
@@ -46,6 +47,7 @@ class RetrievalPipeline:
         self.reranker = None
 
     def initialize(self, top_candidates: int = 15, top_reranked: int = 4):
+        # Lazily constructs the Cohere reranker so the pipeline still works (dense-only) when no Cohere key is set.
         """Initializes the Cohere reranker component."""
         cohere_key = os.getenv("COHERE_API_KEY")
         if cohere_key:
@@ -58,6 +60,7 @@ class RetrievalPipeline:
     def retrieve_and_rerank(
         self, query: str, top_k: int = 4, top_candidates: int = 15
     ) -> List[dict[str, Any]]:
+        # Runs dense search then rerank and standardizes the output so synthesis gets clean, deduped chunks.
         if self.reranker is None:
             self.initialize(top_candidates=top_candidates, top_reranked=top_k)
 
@@ -137,6 +140,7 @@ class RetrievalPipeline:
         return standardized_chunks
 
     def _hydrate_payloads(self, docs: list[Document]) -> list[Document]:
+        # Refetches full Qdrant payloads for the hits so downstream code has complete metadata/text, not just the vector match.
         point_ids = [
             doc.metadata.get("_id")
             for doc in docs
@@ -168,6 +172,7 @@ class RetrievalPipeline:
 
 
 def _payload_text(payload: dict[str, Any]) -> str:
+    # Concatenates the known text-bearing payload fields so a chunk has readable content even if page_content was empty.
     fields = (
         "text",
         "searchable_text",
@@ -188,6 +193,7 @@ def _payload_text(payload: dict[str, Any]) -> str:
 
 
 def _first_value(payload: dict[str, Any], *keys: str, default: str = "") -> str:
+    # Returns the first non-empty value among candidate keys so varied ingestion schemas map to one field.
     for key in keys:
         value = payload.get(key)
         if value is not None and str(value).strip():

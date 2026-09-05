@@ -16,10 +16,11 @@ Coursera-MIP is an AI-powered curriculum analytics and multimodal diagnostic eng
 ### Backend (`backend/`)
 - **API & Runtime**: FastAPI, Uvicorn, Python 3.10+
 - **RAG & Orchestration**: LangChain, FastMCP (Model Context Protocol)
-- **Vector Search & Reranking**: Qdrant, BM25 (`rank-bm25`), Cohere Rerank
+- **Vector Search & Reranking**: Qdrant (dense vector search), Cohere Rerank
 - **LLM Reasoning & Output**: Groq, Instructor, Pydantic v2
-- **Embeddings**: Sentence Transformers, Hugging Face Hub
+- **Embeddings**: BGE via Hugging Face Inference Endpoints (serverless)
 - **Persistence**: Supabase (PostgreSQL)
+- **Auth**: Supabase JWT / JWKS verification (implemented in `app/core/security.py`)
 
 ### Database & Pipeline (`database/`)
 - **Media Ingestion & Parsing**: OpenCV (video frames), PyMuPDF (slides & transcripts), WebVTT (captions)

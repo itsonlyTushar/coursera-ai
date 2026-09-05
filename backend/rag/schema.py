@@ -1,8 +1,6 @@
-# Defining a pydantic schema for validation and structured output response from LLM synthesis 
-from typing import List, Literal
+# Defining a pydantic schema for validation and structured output response from LLM synthesis
+from typing import List
 from pydantic import BaseModel, Field
-
-Modality = str
 
 
 class EvidenceSegment(BaseModel):
