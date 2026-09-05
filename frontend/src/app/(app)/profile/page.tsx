@@ -52,7 +52,7 @@ export default function ProfilePage() {
 
   const handleSignOut = () => {
     toast.success("Signed out successfully");
-    router.push("/login");
+    router.push("/");
   };
 
   return (
