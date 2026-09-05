@@ -14,6 +14,7 @@ load_dotenv()
 
 
 def _get_client():
+    # Builds an Instructor-wrapped Groq client so the LLM returns validated, structured output.
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise ValueError("GROQ_API_KEY is not set in the environment.")
@@ -34,6 +35,7 @@ STRICT INSTRUCTIONS:
 
 
 def _format_evidence_block(chunks: list[dict]) -> str:
+    # Renders retrieved chunks into a labeled text block so the LLM can cite them by segment id.
     lines = []
     for c in chunks:
         loc = f" @ {c['timestamp']}" if c.get("timestamp") else ""
@@ -46,6 +48,7 @@ def _format_evidence_block(chunks: list[dict]) -> str:
 def synthesize_insight(
     query: str, reranked_chunks: list[dict]
 ) -> InsightRecommendation:
+    # Turns query + evidence into a grounded, cited InsightRecommendation so educators get a reviewable diagnosis.
     if not reranked_chunks:
         return InsightRecommendation(
             insight_id=str(uuid.uuid4()),
