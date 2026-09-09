@@ -49,3 +49,4 @@ export * from "./login.types";
 export * from "./recommendation.types";
 export * from "./metrics.types";
 export * from "./summary.types";
+export * from "./ingest.types";

@@ -4,15 +4,13 @@ import json
 import time
 from pathlib import Path
 import pandas as pd
-from sentence_transformers import SentenceTransformer
-
 
 from src.config import PROCESSED_DIR, PROJECT_ROOT,EMBEDDING_MODEL,EMBEDDING_DIMENSIONS
+from src.embedding_client import embed_texts
 
 
 DATABASE_DIR = PROCESSED_DIR / "databases"
 EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
-embedding_model = SentenceTransformer(EMBEDDING_MODEL)
 
 ##EMBEDDING BATCH SIZE
 EMBEDDING_BATCH_SIZE = 32
@@ -110,13 +108,8 @@ def append_embedding_checkpoint(checkpoint_path:Path,records:dict)->None:
 
 def generate_embeddings(texts:list[str],) ->list[list[float]]:
 
-    embeddings = embedding_model.encode(texts,
-                                        batch_size=EMBEDDING_BATCH_SIZE,
-                                        show_progress_bar=False,
-                                        normalize_embeddings=True,
-                                        convert_to_numpy=True,)
-
-    return embeddings.tolist()
+    ##Embeds via the HF Inference API (normalized) instead of a local model.
+    return embed_texts(texts, batch_size=EMBEDDING_BATCH_SIZE).tolist()
 
 #------------------------------------------------------------------------------
 ## GENERATE EMBEDDINGS FOR DATABASE

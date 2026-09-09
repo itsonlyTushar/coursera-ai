@@ -5,6 +5,7 @@ python-dotenv>=1.0.1
 pydantic>=2.7.0
 pydantic-settings>=2.3.0
 httpx>=0.27.0
+python-multipart>=0.0.9  # multipart form uploads for the ingestion endpoint
 
 # Auth (JWT / JWKS verification) — implemented in app/core/security.py
 pyjwt[crypto]>=2.8.0

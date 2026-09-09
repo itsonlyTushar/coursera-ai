@@ -4,8 +4,8 @@ from pathlib import Path
 import json
 import pandas as pd
 from typing import Any, Optional
-from sentence_transformers import SentenceTransformer
 from src.config import PROCESSED_DIR
+from src.embedding_client import embed_texts
 
 DATABASE_DIR = PROCESSED_DIR / "databases"
 EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
@@ -159,8 +159,7 @@ def load_and_validate_database(database_name:str)->pd.DataFrame:
 ##generating embedding and saving embeddings for one database
 #------------------------------------------------------------------------------
 
-def generate_embeddings(model:SentenceTransformer,
-                        database_name:str,
+def generate_embeddings(database_name:str,
                         content_type:str)->None:
 
     database_df = load_and_validate_database(database_name)
@@ -192,11 +191,8 @@ def generate_embeddings(model:SentenceTransformer,
 
     print(f"\n Generating {len(searchable_texts)} embeddings for {content_type}")
 
-    vectors= model.encode(searchable_texts,
-                          batch_size=BATCH_SIZE,
-                          show_progress_bar=True,
-                          convert_to_numpy=True,
-                          normalize_embeddings=True,)
+    ##Embeds via the HF Inference API (normalized) instead of a local model.
+    vectors= embed_texts(searchable_texts, batch_size=BATCH_SIZE)
 
     if vectors.shape != (len(database_df),EMBEDDING_DIMENSIONS):
         raise ValueError(f"uneexpected embedding shape for {database_name} database: {vectors.shape}")
@@ -232,18 +228,14 @@ def generate_embeddings(model:SentenceTransformer,
 #genarating quizz and discussion database
 #--------------------------------------------------------------------------------
 def main()->None:
-    print('loading embedding model: ', MODEL_NAME)
-
-    model= SentenceTransformer(MODEL_NAME)
+    print('embedding via HF Inference API: ', MODEL_NAME)
 
     ## generating embeddings for quiz database
-    generate_embeddings(model=model,
-                        database_name="quiz_database",
+    generate_embeddings(database_name="quiz_database",
                         content_type="quiz")
 
     ## generating embeddings for discussion database
-    generate_embeddings(model=model,
-                        database_name="discussion_database",
+    generate_embeddings(database_name="discussion_database",
                         content_type="discussion")
 
     print("\n quiz and discussion embeddings generated")

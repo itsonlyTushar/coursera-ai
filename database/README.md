@@ -635,6 +635,11 @@ Normalization: L2
 Distance metric: Cosine
 ```
 
+Embeddings are generated via the **Hugging Face Inference API** (`src/embedding_client.py`),
+not a local model — no torch/`sentence-transformers` download, works on any machine with an
+`HF_TOKEN`. This is the same model the backend uses for query embeddings, so document and
+query vectors stay consistent.
+
 ### Text Used for Embedding
 
 | Content type | Searchable representation |

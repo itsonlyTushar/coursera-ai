@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecommendationStats } from "@/components/dashboard/recommendation-stats";
 import { PipelineHealthCard } from "@/components/dashboard/pipeline-health";
+import { ProcessingMonitor } from "@/components/dashboard/processing-monitor";
 import { RefreshCw } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useMetrics } from "@/hooks/query/use-metrics";
@@ -132,6 +133,16 @@ export default function DashboardPage() {
           </h2>
         </div>
         <RecommendationStats stats={stats} isLoading={isRecommendationsLoading} />
+      </section>
+
+      {/* INGESTION PROCESSING MONITOR */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Ingestion Processing Monitor
+          </h2>
+        </div>
+        <ProcessingMonitor />
       </section>
     </div>
   );

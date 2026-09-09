@@ -18,6 +18,7 @@ from app.schemas.dashboard import (
     MetricsResponse,
 )
 from app.schemas.health import HealthResponse
+from app.schemas.ingest import IngestJob, IngestJobList
 from app.schemas.rag import (
     Citation,
     CurateRecommendationRequest,
@@ -41,6 +42,8 @@ __all__ = [
     "DashboardSummaryResponse",
     "MetricsResponse",
     "HealthResponse",
+    "IngestJob",
+    "IngestJobList",
     "Citation",
     "CurateRecommendationRequest",
     "CurateRecommendationResponse",

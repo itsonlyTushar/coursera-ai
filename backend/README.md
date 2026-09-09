@@ -85,6 +85,9 @@ frontend uses.
 | `POST /api/recommendations` | Saves a human-curated recommendation and marks its response `pending` for review. |
 | `GET /api/recommendations` | Paginated curated recommendations with their source context. |
 | `POST /api/review-feedback` | Records a reviewer's approve/reject decision against a response. |
+| `POST /api/ingest` | Multipart upload of a lecture's assets; stages them and starts a background ingestion job. Returns the job to poll. |
+| `GET /api/ingest` | Lists recent ingestion jobs. |
+| `GET /api/ingest/{job_id}` | Live status/progress of one ingestion job. |
 
 ## Authentication
 
@@ -104,6 +107,31 @@ def example(user: CurrentUser = Depends(get_current_user)):
 ```
 
 `get_optional_user` is also available for endpoints that personalize but don't require login.
+
+## Online ingestion (`/api/ingest`)
+
+An educator uploads a lecture's assets (captions `.vtt` + slides `.pdf` required; transcript
+`.pdf` and video optional) to `POST /api/ingest`. The backend stages the files to a per-job
+working directory and runs the pipeline **as a background job** — extract → Gemini visual
+analysis → API embeddings → Qdrant upsert — while the request returns immediately with a
+`job_id` to poll via `GET /api/ingest/{job_id}`.
+
+- **Orchestration** lives in [`app/services/ingestion_service.py`](app/services/ingestion_service.py)
+  (a thread-pool job manager with an injectable runner, so it is unit-tested without ML deps).
+- **The pipeline** lives in the database package
+  ([`database/src/ingest_service.py`](../database/src/ingest_service.py)) — a per-lecture runner
+  that reuses the batch pipeline's building blocks (extraction, `analyse_image`, API embeddings,
+  Qdrant helpers) and produces identical point ids/payloads. Scope: captions + slides. Frames
+  are out of scope for v1 (disabled by default in the batch pipeline too), and slide images stay
+  on local disk (uploading them to the private HF visual dataset is a separate step).
+- **To run ingestion**, the backend host needs the pipeline deps and the database credentials:
+  ```bash
+  pip install -r requirements-ingest.txt      # google-genai, opencv, PyMuPDF, webvtt, ...
+  ```
+  plus a populated `database/.env` (`GEMINI_API_KEY`, `QDRANT_URL`/`QDRANT_API_KEY`, `HF_TOKEN`).
+  The orchestration/API layer and its tests run without these; only executing a real job needs them.
+- v1 keeps job state in memory and runs one job at a time (serial worker). A durable queue /
+  external worker is the scaling path.
 
 ## Notes
 
