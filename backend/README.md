@@ -5,8 +5,9 @@ search → Cohere rerank → Groq/Instructor synthesis) and persists the human-i
 workflow to Supabase (PostgREST).
 
 The HTTP surface is intentionally minimal: it exposes only the endpoints the frontend
-consumes, plus `/health`. Vector ingestion and multimodal extraction live in the separate
-`database/` project, not here.
+consumes, plus `/health`. The multimodal ingestion pipeline is bundled at `backend/database/`;
+the backend drives it online via `POST /api/ingest`, while the full offline batch pipeline in
+that package is run manually by the database team.
 
 ## Project structure
 
@@ -31,7 +32,10 @@ backend/
 │   └── tests/               # pytest suite (runs without external services)
 ├── rag/                     # Standalone RAG pipeline + FastMCP server
 │   ├── retreival.py  synthesis.py  schema.py  setup_server.py
-├── requirements.txt         # runtime deps
+├── database/                # Bundled ingestion pipeline (src/, sql/) + offline batch tools
+│   ├── src/                 # extraction, embedding_client, ingest_service, qdrant_db, ...
+│   └── sql/                 # Supabase schema, views, RLS
+├── requirements.txt         # runtime deps (API + ingestion pipeline)
 ├── requirements-dev.txt     # runtime + test deps
 └── pytest.ini
 ```
@@ -111,25 +115,30 @@ def example(user: CurrentUser = Depends(get_current_user)):
 ## Online ingestion (`/api/ingest`)
 
 An educator uploads a lecture's assets (captions `.vtt` + slides `.pdf` required; transcript
-`.pdf` and video optional) to `POST /api/ingest`. The backend stages the files to a per-job
+`.pdf` optional) to `POST /api/ingest`. The backend stages the files to a per-job
 working directory and runs the pipeline **as a background job** — extract → Gemini visual
 analysis → API embeddings → Qdrant upsert — while the request returns immediately with a
 `job_id` to poll via `GET /api/ingest/{job_id}`.
 
 - **Orchestration** lives in [`app/services/ingestion_service.py`](app/services/ingestion_service.py)
   (a thread-pool job manager with an injectable runner, so it is unit-tested without ML deps).
-- **The pipeline** lives in the database package
-  ([`database/src/ingest_service.py`](../database/src/ingest_service.py)) — a per-lecture runner
+- **The pipeline** lives in the bundled database package
+  ([`database/src/ingest_service.py`](database/src/ingest_service.py)) — a per-lecture runner
   that reuses the batch pipeline's building blocks (extraction, `analyse_image`, API embeddings,
   Qdrant helpers) and produces identical point ids/payloads. Scope: captions + slides. Frames
   are out of scope for v1 (disabled by default in the batch pipeline too), and slide images stay
   on local disk (uploading them to the private HF visual dataset is a separate step).
-- **To run ingestion**, the backend host needs the pipeline deps and the database credentials:
+- **The pipeline is real and live-ready** — no mocks, no offline-only models. Embeddings run
+  through the Hugging Face Inference API (same model the RAG side uses), visual analysis through
+  the Gemini API, and points are upserted straight into the live Qdrant collection. The pipeline
+  deps ship in `requirements.txt`, so a standard install runs ingestion:
   ```bash
-  pip install -r requirements-ingest.txt      # google-genai, opencv, PyMuPDF, webvtt, ...
+  pip install -r requirements.txt
   ```
-  plus a populated `database/.env` (`GEMINI_API_KEY`, `QDRANT_URL`/`QDRANT_API_KEY`, `HF_TOKEN`).
-  The orchestration/API layer and its tests run without these; only executing a real job needs them.
+  A live run also needs the bundled `database/` package (now inside `backend/`) and the ingestion
+  credentials — `GEMINI_API_KEY`, `QDRANT_URL`/`QDRANT_API_KEY`, `HF_TOKEN` — set as environment
+  variables (or in `backend/database/.env` locally). Missing creds surface as a failed job with a
+  clear error (visible in the processing monitor), never a silent stub.
 - v1 keeps job state in memory and runs one job at a time (serial worker). A durable queue /
   external worker is the scaling path.
 
@@ -140,5 +149,5 @@ analysis → API embeddings → Qdrant upsert — while the request returns imme
   fast and missing credentials fail with a clear 503.
 - `retrieval_evidence.content_type` has a DB `CHECK` constraint; `rag_service._content_type`
   normalizes any modality to the allowed set before persistence.
-- Media ingestion, embedding generation, and Qdrant upserts are owned by the `database/`
-  pipeline, not this service.
+- Media parsing, embedding generation, and Qdrant upserts live in the bundled `database/`
+  pipeline; the backend imports and drives it for online ingestion (`/api/ingest`).

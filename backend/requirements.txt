@@ -22,3 +22,12 @@ cohere>=5.5.0
 huggingface-hub>=0.23.0
 groq>=0.9.0
 instructor>=1.4.0
+
+# Online ingestion pipeline (POST /api/ingest → database/src): media parsing + Gemini
+# visual analysis + API embeddings. Scope is captions (.vtt) + slides/transcript (.pdf);
+# no video, so opencv is NOT required (cv2 is imported lazily only for video/frames).
+pandas>=2.0.0
+numpy>=1.24.0
+PyMuPDF>=1.24.0
+webvtt-py>=0.4.6
+google-genai>=0.3.0

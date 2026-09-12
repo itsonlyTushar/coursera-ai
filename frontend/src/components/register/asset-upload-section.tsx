@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { UploadCloud, X, FileText, FileVideo } from "lucide-react";
+import { UploadCloud, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FieldError } from "@/components/ui/field";
 import {
@@ -14,21 +14,19 @@ import {
 import { type AssetType, type UploadAsset } from "@/types/ingest.types";
 
 // Single accept filter for every allowed asset type.
-const ACCEPT = ".vtt,.srt,.pdf,.mp4,.mkv,.avi,.webm";
+const ACCEPT = ".vtt,.srt,.pdf";
 
 // Asset-type options (labels carry the file format so the choice is unambiguous).
 const TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: "captions", label: "VTT File" },
   { value: "slides", label: "Slides (PDF)" },
   { value: "transcript", label: "Transcript (PDF)" },
-  { value: "video", label: "Video Lecture" },
 ];
 
 // Guesses the modality from the file so the type selector starts on the right value.
 function guessType(file: File): AssetType {
   const name = file.name.toLowerCase();
   if (name.endsWith(".vtt") || name.endsWith(".srt")) return "captions";
-  if (file.type.startsWith("video/") || /\.(mp4|mkv|avi|webm)$/.test(name)) return "video";
   return "slides"; // PDFs default to slides; user can switch to transcript
 }
 
@@ -101,7 +99,7 @@ export function AssetUploadSection({
         <UploadCloud className="size-5 text-muted-foreground" />
         <span className="text-sm font-medium text-foreground">Click or drag to add an asset</span>
         <span className="text-xs text-muted-foreground">
-          WebVTT/SRT, PDF, or MP4/MKV — one at a time
+          WebVTT/SRT or PDF — one at a time
         </span>
       </button>
       <input
@@ -121,11 +119,7 @@ export function AssetUploadSection({
               key={`${asset.file.name}-${index}`}
               className="flex items-center gap-3 rounded-lg border border-input bg-muted/30 px-3 py-2.5 dark:bg-input/30"
             >
-              {asset.type === "video" ? (
-                <FileVideo className="size-4 shrink-0 text-primary" />
-              ) : (
-                <FileText className="size-4 shrink-0 text-primary" />
-              )}
+              <FileText className="size-4 shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{asset.file.name}</p>
                 <p className="text-xs text-muted-foreground">{formatBytes(asset.file.size)}</p>

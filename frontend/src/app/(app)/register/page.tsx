@@ -56,7 +56,7 @@ export default function RegisterPage() {
     formData.append("lecture_id", values.lecture_id);
     formData.append("course_id", values.course_id || "deeplearning");
     if (values.owner) formData.append("owner", values.owner);
-    // Each asset maps to its matching backend form field (captions/slides/transcript/video).
+    // Each asset maps to its matching backend form field (captions/slides/transcript).
     for (const asset of values.assets) {
       formData.append(asset.type, asset.file);
     }
@@ -87,7 +87,7 @@ export default function RegisterPage() {
           <CardHeader className="border-b">
             <CardTitle>New ingestion</CardTitle>
             <CardDescription>
-              Captions and slides are required. Transcript and video are optional.
+              Captions and slides are required. Transcript is optional.
             </CardDescription>
           </CardHeader>
 
@@ -146,7 +146,7 @@ export default function RegisterPage() {
                 </FieldLabel>
                 <p className="text-xs text-muted-foreground">
                   Add a captions file (.vtt/.srt) and slides (.pdf) at minimum; transcript
-                  (.pdf) and video are optional. Pick the type for each file after adding it.
+                  (.pdf) is optional. Pick the type for each file after adding it.
                 </p>
                 <Controller
                   name="assets"
