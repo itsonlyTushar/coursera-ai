@@ -14,13 +14,15 @@ from qdrant_client.models import ( Distance,PointStruct,VectorParams)
 
 from src.config import (PROCESSED_DIR,PROJECT_ROOT)
 
+load_dotenv(PROJECT_ROOT / ".env")
+
 DATABASE_DIR = PROCESSED_DIR / "databases"
 EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
-COLLECTION_NAME = "COURSEERA_ALMAX_MULTIMODAL"
+# Honors QDRANT_COLLECTION so a throwaway test collection can be targeted without
+# touching production; defaults to the live collection when unset.
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "COURSEERA_ALMAX_MULTIMODAL")
 VECTOR_DIMENSIONS = 768
 UPLOAD_BATCH_SIZE = 100
-
-load_dotenv(PROJECT_ROOT / ".env")
 
 QDRANT_URL = os.getenv("QDRANT_URL","http://localhost:6333")
 

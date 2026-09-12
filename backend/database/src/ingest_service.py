@@ -178,8 +178,10 @@ def ingest_lecture(
     transcript_path: Optional[Path] = None,
     course_id: str = COURSE_ID,
     progress: Optional[ProgressCallback] = None,
+    push: bool = True,
 ) -> dict[str, Any]:
     # Ingests one lecture's uploaded assets end to end and upserts caption+slide points into Qdrant.
+    # With push=False it runs extract -> Gemini -> embed but skips the upsert (dry run).
     report = progress or _noop_progress
     lecture_id = normalize_lecture_id(lecture_id)
     extracted_dir = Path(work_dir) / "extracted"
@@ -205,10 +207,13 @@ def ingest_lecture(
     report("embedding", 0.75, "embedding records via API")
     points = _to_points(caption_records) + _to_points(slide_records)
 
-    report("upsert", 0.9, f"upserting {len(points)} points to Qdrant")
-    client = create_qdrant_client()
-    create_qdrant_collection(client)
-    upload_points(client, points)
+    if push:
+        report("upsert", 0.9, f"upserting {len(points)} points to Qdrant")
+        client = create_qdrant_client()
+        create_qdrant_collection(client)
+        upload_points(client, points)
+    else:
+        report("upsert", 0.9, f"dry run: {len(points)} points prepared, not upserted")
 
     report("done", 1.0, "ingestion complete")
     return {
@@ -216,6 +221,8 @@ def ingest_lecture(
         "course_id": course_id,
         "caption_records": len(caption_records),
         "slide_records": len(slide_records),
-        "points_upserted": len(points),
+        "points_upserted": len(points) if push else 0,
+        "points_prepared": len(points),
+        "pushed": push,
         "collection": COLLECTION_NAME,
     }

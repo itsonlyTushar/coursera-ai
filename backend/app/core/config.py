@@ -9,10 +9,17 @@ import os
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
+
+# Load the whole backend/.env into the process environment so a single file powers
+# everything: the typed Settings below, the rag pipeline (COHERE_API_KEY, etc.) and
+# the bundled ingestion pipeline (GEMINI_API_KEY, etc.), which read os.getenv directly.
+# No-op on hosts that inject real env vars (e.g. Render), where there is no .env file.
+load_dotenv(BACKEND_ROOT / ".env")
 
 
 class Settings(BaseSettings):
