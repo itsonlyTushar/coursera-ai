@@ -220,37 +220,37 @@ __marimo__/
 
 
 # Database pipeline secrets
-database/.env
-database/*.env
-!database/.env.example
+backend/database/.env
+backend/database/*.env
+!backend/database/.env.example
 
 # Python environments and caches
-database/.venv/
-database/venv/
-database/**/__pycache__/
-database/**/*.py[cod]
-database/.pytest_cache/
+backend/database/.venv/
+backend/database/venv/
+backend/database/**/__pycache__/
+backend/database/**/*.py[cod]
+backend/database/.pytest_cache/
 
 # Raw course data
-database/deeplearning/
-database/data/
+backend/database/deeplearning/
+backend/database/data/
 
 # Generated outputs
-database/processed/
-database/qdrant_storage/
+backend/database/processed/
+backend/database/qdrant_storage/
 
 # Checkpoints
-database/**/*checkpoint*.json
-database/**/*checkpoint*.jsonl
+backend/database/**/*checkpoint*.json
+backend/database/**/*checkpoint*.jsonl
 
 # Large media and source documents
-database/**/*.mp4
-database/**/*.mkv
-database/**/*.avi
-database/**/*.pdf
-database/**/*.png
-database/**/*.jpg
-database/**/*.jpeg
+backend/database/**/*.mp4
+backend/database/**/*.mkv
+backend/database/**/*.avi
+backend/database/**/*.pdf
+backend/database/**/*.png
+backend/database/**/*.jpg
+backend/database/**/*.jpeg
 
 # Locally generated manifests
-database/manifests/
+backend/database/manifests/

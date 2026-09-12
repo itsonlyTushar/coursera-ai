@@ -7,13 +7,17 @@ Slide text
 Slide images  """
 
 import json
-import cv2
 from collections import Counter
 from pathlib import Path
 import re
 import fitz
 import pandas as pd
 import webvtt
+
+# NOTE: cv2 (opencv) is imported lazily inside the two functions that use it
+# (video metadata + reading a pre-existing slide image). This keeps the module
+# importable on hosts without opencv/libGL — the captions+slides ingestion path
+# never touches cv2, so an opencv-free deploy works.
 from src.config import (CAPTION_CHUNK_SIZE,CAPTION_OVERLAP_SIZE,lecture_output_dir)
 
 from src.discovery import LectureAssets
@@ -34,6 +38,8 @@ def timestamp_to_seconds(timestamp:str)->float:
 def extract_video_metadata(lecture_id:str,
                            video_path:Path,
                            output_dir:Path)->dict:
+
+    import cv2  # lazy: only needed when a video asset is supplied
 
     video= cv2.VideoCapture(str(video_path)) ##opening and processing lec02 video
 
@@ -220,6 +226,8 @@ def extract_slide_text(lecture_id:str,
 
             ##avoiding saving duplicate images
             if image_path.exists():
+
+                import cv2  # lazy: only when re-reading an already-rendered slide image
 
                 image = cv2.imread(str(image_path))
 

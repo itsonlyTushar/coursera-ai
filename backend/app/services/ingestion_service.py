@@ -25,7 +25,8 @@ from app.schemas import IngestJob
 logger = get_logger(__name__)
 
 Runner = Callable[..., dict[str, Any]]
-DATABASE_DIR = BACKEND_ROOT.parent / "database"
+# The pipeline package lives inside the backend (backend/database/src/...).
+DATABASE_DIR = BACKEND_ROOT / "database"
 
 
 def _now() -> str:
@@ -126,7 +127,6 @@ class IngestionJobManager:
                 caption_path=files.get("caption"),
                 slide_path=files.get("slide"),
                 transcript_path=files.get("transcript"),
-                video_path=files.get("video"),
                 progress=progress,
             )
             self._update(

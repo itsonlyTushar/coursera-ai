@@ -31,7 +31,7 @@ export interface IngestJobList {
 }
 
 // ASSET TYPES ACCEPTED BY THE INGESTION ENDPOINT (map 1:1 to backend form fields)
-export type AssetType = "captions" | "slides" | "transcript" | "video";
+export type AssetType = "captions" | "slides" | "transcript";
 
 // ONE UPLOADED ASSET: a file plus the modality it should be ingested as
 export interface UploadAsset {

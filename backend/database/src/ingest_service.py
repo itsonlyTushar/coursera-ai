@@ -11,10 +11,10 @@ It deliberately reuses the granular, path-parameterized building blocks
 the Qdrant helpers) so the points it upserts are identical in id and payload
 shape to the batch pipeline's.
 
-Scope (v1): captions + slides. Video, if supplied, is used only for metadata;
-caption-linked frame extraction is intentionally out of scope (it is disabled by
-default in the batch pipeline too). Slide images are kept on local disk for this
-job; uploading them to the private HF visual dataset is a separate step.
+Scope: captions (.vtt) + slides (.pdf), with an optional transcript (.pdf).
+No video — video/frame handling is out of scope for the online tool (it stays in
+the offline batch pipeline). Slide images are kept on local disk for this job;
+uploading them to the private HF visual dataset is a separate step.
 """
 from __future__ import annotations
 
@@ -31,7 +31,6 @@ from src.extraction import (
     create_caption_chunks,
     extract_slide_text,
     extract_tarnscript_text,
-    extract_video_metadata,
     extract_vtt_captions,
 )
 from src.qdrant_db import (
@@ -143,13 +142,17 @@ def _build_slide_records(
 
 def _to_points(records: list[dict[str, Any]]) -> list[PointStruct]:
     # Embeds each record's text via the API and packs id/vector/payload exactly like the batch uploader.
-    texts = [record["_embedding_text"] for record in records]
-    vectors = embed_texts(texts)
-    if len(vectors) != len(records):
-        raise ValueError(f"Embedding count {len(vectors)} != record count {len(records)}")
+    # Skip records with no embeddable text (e.g. blank/title slides) so the API never sees empty input.
+    usable = [record for record in records if str(record.get("_embedding_text") or "").strip()]
+    if not usable:
+        return []
+
+    vectors = embed_texts([record["_embedding_text"] for record in usable])
+    if len(vectors) != len(usable):
+        raise ValueError(f"Embedding count {len(vectors)} != record count {len(usable)}")
 
     points: list[PointStruct] = []
-    for record, vector in zip(records, vectors):
+    for record, vector in zip(usable, vectors):
         payload = {
             key: clean_payload_value(value)
             for key, value in record.items()
@@ -173,7 +176,6 @@ def ingest_lecture(
     caption_path: Path,
     slide_path: Path,
     transcript_path: Optional[Path] = None,
-    video_path: Optional[Path] = None,
     course_id: str = COURSE_ID,
     progress: Optional[ProgressCallback] = None,
 ) -> dict[str, Any]:
@@ -190,10 +192,6 @@ def ingest_lecture(
     if transcript_path:
         report("extract", 0.15, "extracting transcript")
         extract_tarnscript_text(lecture_id, Path(transcript_path), extracted_dir)
-
-    if video_path:
-        report("extract", 0.2, "reading video metadata")
-        extract_video_metadata(lecture_id, Path(video_path), extracted_dir)
 
     report("extract", 0.25, "extracting slides")
     slide_df, slide_image_df = extract_slide_text(lecture_id, Path(slide_path), extracted_dir)

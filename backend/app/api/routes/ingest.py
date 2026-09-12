@@ -22,7 +22,6 @@ async def create_ingestion(
     captions: UploadFile = File(...),
     slides: UploadFile = File(...),
     transcript: UploadFile | None = File(None),
-    video: UploadFile | None = File(None),
     manager: IngestionJobManager = Depends(get_ingestion_manager),
 ) -> IngestJob:
     # Stages an educator's uploaded lecture assets and kicks off ingestion as a background job, returning the job to poll.
@@ -35,10 +34,6 @@ async def create_ingestion(
     if transcript is not None:
         files["transcript"] = manager.save_upload(
             job.job_id, f"transcript{_suffix(transcript, '.pdf')}", await transcript.read()
-        )
-    if video is not None:
-        files["video"] = manager.save_upload(
-            job.job_id, f"video{_suffix(video, '.mp4')}", await video.read()
         )
 
     manager.start(job.job_id, files)

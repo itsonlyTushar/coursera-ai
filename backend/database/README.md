@@ -1,8 +1,8 @@
-# COURSEERA ALMAX Multimodal Database Pipeline
+# Coursera Multimodal Database Pipeline
 
 ## 1. Project Overview
 
-The COURSEERA ALMAX database pipeline prepares multimodal educational content for semantic retrieval and Retrieval-Augmented Generation (RAG).
+The Coursera multimodal database pipeline prepares multimodal educational content for semantic retrieval and Retrieval-Augmented Generation (RAG).
 
 The platform combines information from five content types:
 
@@ -97,18 +97,17 @@ Backend retrieval and RAG
 ## 4. Repository Structure
 
 ```text
-database/
+backend/database/
 ├── src/
 │   ├── __init__.py
 │   ├── config.py
 │   ├── discovery.py
 │   ├── extraction.py
-│   ├── frame_audit.py
+│   ├── embedding_client.py         # API-based embeddings (HF Inference)
+│   ├── ingest_service.py           # per-lecture online ingestion runner
 │   ├── visual_analysis.py
 │   ├── visual_database.py
 │   ├── caption_databases.py
-│   ├── quiz_db.py
-│   ├── discussion_db.py
 │   ├── embeddings.py
 │   ├── quiz_discussion_embedding.py
 │   ├── qdrant_db.py
@@ -128,12 +127,11 @@ database/
 | `config.py` | Defines project paths and shared configuration |
 | `discovery.py` | Discovers source assets and creates the inventory |
 | `extraction.py` | Extracts and preprocesses course content |
-| `frame_audit.py` | Extracts representative caption-linked video frames |
+| `embedding_client.py` | API-based text embeddings via the Hugging Face Inference API |
+| `ingest_service.py` | Per-lecture online ingestion runner (driven by the backend `/api/ingest`) |
 | `visual_analysis.py` | Analyses slides and frames using Gemini |
 | `visual_database.py` | Creates structured slide and frame records |
 | `caption_databases.py` | Creates the caption database |
-| `quiz_db.py` | Creates or prepares quiz records |
-| `discussion_db.py` | Creates or prepares discussion records |
 | `embeddings.py` | Generates caption, slide and frame embeddings |
 | `quiz_discussion_embedding.py` | Generates quiz and discussion embeddings |
 | `qdrant_db.py` | Uploads caption, slide and frame points |
@@ -151,7 +149,7 @@ The repository contains pipeline code only. Raw files and generated outputs are 
 The complete local project may use the following structure:
 
 ```text
-COURSEERA_ALMAX/
+coursera-mip/
 ├── raw/
 │   ├── videos/
 │   ├── captions/
@@ -164,7 +162,6 @@ COURSEERA_ALMAX/
 │   ├── inventories/
 │   ├── transcripts/
 │   ├── slide_images/
-│   ├── frame_audit/
 │   ├── visual_analysis/
 │   ├── databases/
 │   └── embeddings/

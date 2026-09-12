@@ -22,10 +22,10 @@ Coursera-MIP is an AI-powered curriculum analytics and multimodal diagnostic eng
 - **Persistence**: Supabase (PostgreSQL)
 - **Auth**: Supabase JWT / JWKS verification (implemented in `app/core/security.py`)
 
-### Database & Pipeline (`database/`)
-- **Media Ingestion & Parsing**: OpenCV (video frames), PyMuPDF (slides & transcripts), WebVTT (captions)
+### Database & Pipeline (`backend/database/`)
+- **Media Ingestion & Parsing**: PyMuPDF (slides & transcripts), WebVTT (captions); OpenCV (video frames, offline batch pipeline only)
 - **Multimodal AI**: Google Gemini API (`google-genai`) for visual slide & frame analysis
-- **Vector Ingestion**: Qdrant Client, Sentence Transformers (768-dim embeddings)
+- **Vector Ingestion**: Qdrant Client, BGE embeddings via the Hugging Face Inference API (768-dim)
 - **Relational Storage & Views**: Supabase (PostgreSQL schemas, views, and RLS policies)
 - **Data Processing**: Pandas, NumPy, Pydantic
 
@@ -35,7 +35,7 @@ Coursera-MIP is an AI-powered curriculum analytics and multimodal diagnostic eng
 
 ```text
 coursera-mip/
-├── backend/    # FastAPI server, RAG retrieval & synthesis pipeline, MCP server
-├── database/   # Multimodal extraction, ingestion pipelines, and Supabase SQL
-└── frontend/   # Next.js web application, diagnostic dashboard, and chat interface
+├── backend/        # FastAPI server, RAG pipeline, MCP server, + the ingestion pipeline
+│   └── database/   # Multimodal extraction, ingestion pipeline, and Supabase SQL
+└── frontend/       # Next.js web application, diagnostic dashboard, and chat interface
 ```
