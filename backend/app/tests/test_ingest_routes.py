@@ -77,3 +77,56 @@ def test_ingest_list(client, tmp_path):
 
     jobs = client.get("/api/ingest").json()["jobs"]
     assert any(job["lecture_id"] == "lec02" for job in jobs)
+
+
+# Asserts a request with no asset files at all is rejected before a job is even created.
+def test_ingest_requires_at_least_one_asset(client, tmp_path):
+    app.dependency_overrides[get_ingestion_manager] = lambda: _manager(tmp_path)
+
+    resp = client.post("/api/ingest", data={"lecture_id": "lec03"})
+
+    assert resp.status_code == 422
+    assert "at least one asset" in resp.json()["detail"].lower()
+
+
+# Asserts a lecture with only a transcript (no captions/slides) is accepted and staged —
+# not every course ships slide decks or synced captions.
+def test_ingest_accepts_transcript_only(client, tmp_path):
+    manager = _manager(tmp_path)
+    app.dependency_overrides[get_ingestion_manager] = lambda: manager
+
+    resp = client.post(
+        "/api/ingest",
+        data={"lecture_id": "readings", "course_id": "bio-101"},
+        files={"transcript": ("transcript.md", b"# Readings\n\nSome notes.", "text/markdown")},
+    )
+
+    assert resp.status_code == 200
+    job = resp.json()
+    done = _wait(client, job["job_id"])
+    assert done["status"] == "completed"
+    assert (manager.job_dir(job["job_id"]) / "transcript.md").exists()
+    assert not (manager.job_dir(job["job_id"]) / "captions.vtt").exists()
+
+
+# Asserts a quiz question set + its solutions (no captions/slides/transcript) is accepted —
+# exam/assignment evidence is exactly the "quiz + student answers" content the app needs.
+def test_ingest_accepts_quiz_and_solution_only(client, tmp_path):
+    manager = _manager(tmp_path)
+    app.dependency_overrides[get_ingestion_manager] = lambda: manager
+
+    resp = client.post(
+        "/api/ingest",
+        data={"lecture_id": "exam-1", "course_id": "bio-101"},
+        files={
+            "quiz": ("quiz.pdf", b"%PDF-1.4 fake question", "application/pdf"),
+            "quiz_solution": ("quiz_solution.pdf", b"%PDF-1.4 fake solution", "application/pdf"),
+        },
+    )
+
+    assert resp.status_code == 200
+    job = resp.json()
+    done = _wait(client, job["job_id"])
+    assert done["status"] == "completed"
+    assert (manager.job_dir(job["job_id"]) / "quiz.pdf").exists()
+    assert (manager.job_dir(job["job_id"]) / "quiz_solution.pdf").exists()

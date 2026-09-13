@@ -77,8 +77,8 @@ export default function RegisterPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ingest Lecture Assets"
-        description="Upload a lecture's captions, slides and transcript to extract, analyse and index it into the multimodal knowledge base."
+        title="Ingest Course Material"
+        description="Upload whatever you have for a lecture or course unit — captions, slides, transcript, discussion threads, or a quiz/exam with its solutions — to extract, analyse and index it into the multimodal knowledge base."
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -87,7 +87,7 @@ export default function RegisterPage() {
           <CardHeader className="border-b">
             <CardTitle>New ingestion</CardTitle>
             <CardDescription>
-              Captions and slides are required. Transcript is optional.
+              Not every course has slides or synced captions — add whichever assets you have.
             </CardDescription>
           </CardHeader>
 
@@ -145,18 +145,18 @@ export default function RegisterPage() {
                   Assets <span className="text-destructive">*</span>
                 </FieldLabel>
                 <p className="text-xs text-muted-foreground">
-                  Add a captions file (.vtt/.srt) and slides (.pdf) at minimum; transcript
-                  (.pdf) is optional. Pick the type for each file after adding it.
+                  Add at least one asset: captions (.vtt/.srt), slides (.pdf), transcript
+                  (.pdf/.md), discussion notes (.md), or a quiz/exam and its solutions
+                  (.pdf/.md). Pick the type for each file after adding it.
                 </p>
                 <Controller
                   name="assets"
                   control={control}
                   rules={{
                     validate: (assets) => {
+                      if (assets.length === 0)
+                        return "Add at least one asset (captions, slides, transcript, or discussion notes).";
                       const types = assets.map((asset) => asset.type);
-                      if (!types.includes("captions"))
-                        return "Add a captions file (.vtt or .srt).";
-                      if (!types.includes("slides")) return "Add a slides PDF.";
                       if (types.length !== new Set(types).size)
                         return "Each asset type can only be used once.";
                       return true;

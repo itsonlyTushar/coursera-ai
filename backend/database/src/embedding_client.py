@@ -26,12 +26,8 @@ from src.config import (
 load_dotenv(PROJECT_ROOT / ".env")
 
 # Reuse whichever HF token is configured (the pipeline already needs one for the
-# private visual dataset). HF_TOKEN_EMBEDDING mirrors the backend's naming.
-_HF_TOKEN = (
-    os.getenv("HF_TOKEN")
-    or os.getenv("HF_TOKEN_EMBEDDING")
-    or os.getenv("HUGGINGFACEHUB_API_TOKEN")
-)
+# private visual dataset).
+_HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # Texts per Inference API request. One-time ingestion, so keep batches modest.
 DEFAULT_BATCH_SIZE = 32
