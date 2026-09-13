@@ -235,6 +235,9 @@ backend/database/.pytest_cache/
 backend/database/deeplearning/
 backend/database/data/
 
+# Locally staged course material for online ingestion (README.md stays tracked)
+backend/database/courses/*/
+
 # Generated outputs
 backend/database/processed/
 backend/database/qdrant_storage/

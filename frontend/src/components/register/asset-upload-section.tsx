@@ -14,19 +14,26 @@ import {
 import { type AssetType, type UploadAsset } from "@/types/ingest.types";
 
 // Single accept filter for every allowed asset type.
-const ACCEPT = ".vtt,.srt,.pdf";
+const ACCEPT = ".vtt,.srt,.pdf,.md,.txt";
 
 // Asset-type options (labels carry the file format so the choice is unambiguous).
 const TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: "captions", label: "VTT File" },
   { value: "slides", label: "Slides (PDF)" },
-  { value: "transcript", label: "Transcript (PDF)" },
+  { value: "transcript", label: "Transcript (PDF/MD)" },
+  { value: "discussion", label: "Discussion Notes (MD)" },
+  { value: "quiz", label: "Quiz/Exam (PDF)" },
+  { value: "quiz_solution", label: "Quiz Solution (PDF)" },
 ];
 
 // Guesses the modality from the file so the type selector starts on the right value.
 function guessType(file: File): AssetType {
   const name = file.name.toLowerCase();
   if (name.endsWith(".vtt") || name.endsWith(".srt")) return "captions";
+  if (name.includes("solution")) return "quiz_solution";
+  if (name.includes("quiz") || name.includes("exam") || name.includes("assignment")) return "quiz";
+  if (name.includes("discussion")) return "discussion";
+  if (name.endsWith(".md") || name.endsWith(".txt")) return "transcript";
   return "slides"; // PDFs default to slides; user can switch to transcript
 }
 
@@ -64,7 +71,7 @@ export function AssetUploadSection({
         const free = TYPE_OPTIONS.map((option) => option.value).find(
           (candidate) => !next.some((asset) => asset.type === candidate)
         );
-        if (!free) continue; // all four slots already filled
+        if (!free) continue; // every asset type already used
         type = free;
       }
       next.push({ file, type });
@@ -99,7 +106,7 @@ export function AssetUploadSection({
         <UploadCloud className="size-5 text-muted-foreground" />
         <span className="text-sm font-medium text-foreground">Click or drag to add an asset</span>
         <span className="text-xs text-muted-foreground">
-          WebVTT/SRT or PDF — one at a time
+          WebVTT/SRT, PDF, or Markdown — one at a time
         </span>
       </button>
       <input
@@ -130,7 +137,7 @@ export function AssetUploadSection({
                 disabled={disabled}
                 onValueChange={(value) => setType(index, value as AssetType)}
               >
-                <SelectTrigger aria-label="Asset type" className="w-40 shrink-0">
+                <SelectTrigger aria-label="Asset type" className="w-48 shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

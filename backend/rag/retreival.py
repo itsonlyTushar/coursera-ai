@@ -14,8 +14,12 @@ load_dotenv()
 
 class RetrievalPipeline:
     # Wires Qdrant + serverless HF embeddings + Cohere rerank so a query can be turned into ranked evidence.
-    def __init__(self, collection_name: str = "COURSEERA_ALMAX_MULTIMODAL"):
-        self.collection_name = collection_name
+    def __init__(self, collection_name: str | None = None):
+        # Honors QDRANT_COLLECTION (same as the ingestion side) so retrieval and ingestion
+        # always target the same collection without needing to edit code per deployment.
+        self.collection_name = collection_name or os.getenv(
+            "QDRANT_COLLECTION", "COURSEERA_ALMAX_MULTIMODAL"
+        )
         self.qdrant_url = os.getenv("QDRANT_URL")
         self.qdrant_api_key = (
             os.getenv("QDRANT_API_KEY")
@@ -24,12 +28,7 @@ class RetrievalPipeline:
         )
 
         # Serverless Cloud API (Uses ~0 MB server RAM)
-        hf_token = (
-            os.getenv("HF_TOKEN_EMBEDDING")
-            or os.getenv("HF_TOKEN_ORIGINAL")
-            or os.getenv("HF_TOKEN")
-            or os.getenv("HUGGINGFACEHUB_API_TOKEN")
-        )
+        hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
         self.embeddings = HuggingFaceEndpointEmbeddings(
             model="BAAI/bge-base-en-v1.5",
             huggingfacehub_api_token=hf_token,

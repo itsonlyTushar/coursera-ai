@@ -7,6 +7,10 @@ export interface IngestJobResult {
   course_id?: string;
   caption_records?: number;
   slide_records?: number;
+  transcript_records?: number;
+  discussion_records?: number;
+  quiz_records?: number;
+  quiz_solution_records?: number;
   points_upserted?: number;
   collection?: string;
 }
@@ -31,7 +35,14 @@ export interface IngestJobList {
 }
 
 // ASSET TYPES ACCEPTED BY THE INGESTION ENDPOINT (map 1:1 to backend form fields)
-export type AssetType = "captions" | "slides" | "transcript";
+// All optional server-side; at least one must be present per lecture/unit.
+export type AssetType =
+  | "captions"
+  | "slides"
+  | "transcript"
+  | "discussion"
+  | "quiz"
+  | "quiz_solution";
 
 // ONE UPLOADED ASSET: a file plus the modality it should be ingested as
 export interface UploadAsset {

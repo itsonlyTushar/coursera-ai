@@ -53,9 +53,20 @@ export function IngestionProgress({ job }: { job: IngestJob }) {
         </div>
 
         {job.status === "completed" && (
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <Stat label="Captions" value={job.result?.caption_records} />
-            <Stat label="Slides" value={job.result?.slide_records} />
+          <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3">
+            {/* Only shows the record types this lecture actually had — not every course ships all four. */}
+            {[
+              { label: "Captions", value: job.result?.caption_records },
+              { label: "Slides", value: job.result?.slide_records },
+              { label: "Transcript", value: job.result?.transcript_records },
+              { label: "Discussion", value: job.result?.discussion_records },
+              { label: "Quiz", value: job.result?.quiz_records },
+              { label: "Solutions", value: job.result?.quiz_solution_records },
+            ]
+              .filter((stat) => (stat.value ?? 0) > 0)
+              .map((stat) => (
+                <Stat key={stat.label} label={stat.label} value={stat.value} />
+              ))}
             <Stat label="Points" value={job.result?.points_upserted} />
           </div>
         )}

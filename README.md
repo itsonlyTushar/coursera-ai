@@ -20,7 +20,6 @@ Coursera-MIP is an AI-powered curriculum analytics and multimodal diagnostic eng
 - **LLM Reasoning & Output**: Groq, Instructor, Pydantic v2
 - **Embeddings**: BGE via Hugging Face Inference Endpoints (serverless)
 - **Persistence**: Supabase (PostgreSQL)
-- **Auth**: Supabase JWT / JWKS verification (implemented in `app/core/security.py`)
 
 ### Database & Pipeline (`backend/database/`)
 - **Media Ingestion & Parsing**: PyMuPDF (slides & transcripts), WebVTT (captions); OpenCV (video frames, offline batch pipeline only)

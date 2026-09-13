@@ -17,8 +17,7 @@ backend/
 │   ├── main.py              # FastAPI app: logging, CORS, router mount
 │   ├── core/                # Cross-cutting concerns
 │   │   ├── config.py        # Settings (pydantic-settings) + get_settings()
-│   │   ├── logging.py       # setup_logging() / get_logger()
-│   │   └── security.py      # JWT/JWKS auth dependency (implemented, NOT wired)
+│   │   └── logging.py       # setup_logging() / get_logger()
 │   ├── schemas/             # Pydantic request/response models, grouped by domain
 │   │   ├── health.py  dashboard.py  conversation.py  rag.py
 │   ├── services/            # Business logic / integrations
@@ -92,32 +91,19 @@ frontend uses.
 | `POST /api/ingest` | Multipart upload of a lecture's assets; stages them and starts a background ingestion job. Returns the job to poll. |
 | `GET /api/ingest` | Lists recent ingestion jobs. |
 | `GET /api/ingest/{job_id}` | Live status/progress of one ingestion job. |
-
-## Authentication
-
-Supabase JWT verification is implemented in [`app/core/security.py`](app/core/security.py)
-but **not yet wired** — every endpoint is currently public. Tokens are verified against the
-JWKS at `SUPABASE_JWKS_URL` (RS256/ES256) with the `authenticated` audience.
-
-To protect an endpoint, add the dependency:
-
-```python
-from fastapi import Depends
-from app.core.security import CurrentUser, get_current_user
-
-@router.get("/api/example")
-def example(user: CurrentUser = Depends(get_current_user)):
-    return {"user_id": user.id}
-```
-
-`get_optional_user` is also available for endpoints that personalize but don't require login.
+  
 
 ## Online ingestion (`/api/ingest`)
 
-An educator uploads a lecture's assets (captions `.vtt` + slides `.pdf` required; transcript
-`.pdf` optional) to `POST /api/ingest`. The backend stages the files to a per-job
-working directory and runs the pipeline **as a background job** — extract → Gemini visual
-analysis → API embeddings → Qdrant upsert — while the request returns immediately with a
+An educator uploads course material — captions (`.vtt`/`.srt`), slides (`.pdf`), transcript
+(`.pdf`/`.md`), discussion notes (`.md`), and/or a quiz/exam question set with its solutions
+(`.pdf`/`.md` each) — to `POST /api/ingest`. All six are optional but **at least one is
+required**: the project's purpose is finding where students struggle, so the full course
+surface matters — not every course ships slide decks or synced captions, and exam/assignment
+questions plus their official solutions are exactly the kind of evidence (expected answer vs.
+discussion confusion) the RAG layer needs. The backend stages the files to a per-job working
+directory and runs the pipeline **as a background job** — extract → Gemini visual analysis
+(slides only) → API embeddings → Qdrant upsert — while the request returns immediately with a
 `job_id` to poll via `GET /api/ingest/{job_id}`.
 
 - **Orchestration** lives in [`app/services/ingestion_service.py`](app/services/ingestion_service.py)
@@ -125,9 +111,17 @@ analysis → API embeddings → Qdrant upsert — while the request returns imme
 - **The pipeline** lives in the bundled database package
   ([`database/src/ingest_service.py`](database/src/ingest_service.py)) — a per-lecture runner
   that reuses the batch pipeline's building blocks (extraction, `analyse_image`, API embeddings,
-  Qdrant helpers) and produces identical point ids/payloads. Scope: captions + slides. Frames
-  are out of scope for v1 (disabled by default in the batch pipeline too), and slide images stay
-  on local disk (uploading them to the private HF visual dataset is a separate step).
+  Qdrant helpers) and produces identical point ids/payloads. Transcript, discussion, and quiz
+  text are all chunked and embedded, not just extracted and discarded. Quiz questions and
+  solutions share `content_type="quiz"` (distinguished by a `role` payload field, since the
+  DB only allows a fixed set of content types) — transcript/discussion/quiz are already valid
+  end to end: Qdrant payload, the RAG service's normalizer, and the Supabase DB constraint.
+  Frames are out of scope for v1 (disabled by default in the batch pipeline too), and slide
+  images stay on local disk (uploading them to the private HF visual dataset is a separate step).
+- **[`scripts/batch_ingest.py`](scripts/batch_ingest.py)** drives this endpoint over HTTP for a
+  whole folder of course material at once — one lecture folder per unit, plus flat
+  question/solution containers like `assignments/`/`exams/` auto-paired by filename (no
+  per-item subfolder needed). See [`database/courses/README.md`](database/courses/README.md).
 - **The pipeline is real and live-ready** — no mocks, no offline-only models. Embeddings run
   through the Hugging Face Inference API (same model the RAG side uses), visual analysis through
   the Gemini API, and points are upserted straight into the live Qdrant collection. The pipeline

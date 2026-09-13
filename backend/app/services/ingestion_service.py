@@ -127,6 +127,9 @@ class IngestionJobManager:
                 caption_path=files.get("caption"),
                 slide_path=files.get("slide"),
                 transcript_path=files.get("transcript"),
+                discussion_path=files.get("discussion"),
+                quiz_path=files.get("quiz"),
+                quiz_solution_path=files.get("quiz_solution"),
                 progress=progress,
             )
             self._update(

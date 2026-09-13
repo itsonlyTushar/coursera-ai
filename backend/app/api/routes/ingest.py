@@ -19,21 +19,44 @@ async def create_ingestion(
     lecture_id: str = Form(...),
     course_id: str = Form("deeplearning"),
     owner: str | None = Form(None),
-    captions: UploadFile = File(...),
-    slides: UploadFile = File(...),
+    captions: UploadFile | None = File(None),
+    slides: UploadFile | None = File(None),
     transcript: UploadFile | None = File(None),
+    discussion: UploadFile | None = File(None),
+    quiz: UploadFile | None = File(None),
+    quiz_solution: UploadFile | None = File(None),
     manager: IngestionJobManager = Depends(get_ingestion_manager),
 ) -> IngestJob:
-    # Stages an educator's uploaded lecture assets and kicks off ingestion as a background job, returning the job to poll.
+    # Stages whichever lecture assets were uploaded (not every course has slides/captions) and starts a background job.
+    if not any([captions, slides, transcript, discussion, quiz, quiz_solution]):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "At least one asset is required: captions, slides, transcript, "
+                "discussion, quiz, or quiz_solution."
+            ),
+        )
+
     job = manager.create_job(lecture_id=lecture_id, course_id=course_id, owner=owner)
 
-    files: dict[str, Path] = {
-        "caption": manager.save_upload(job.job_id, f"captions{_suffix(captions, '.vtt')}", await captions.read()),
-        "slide": manager.save_upload(job.job_id, f"slides{_suffix(slides, '.pdf')}", await slides.read()),
-    }
+    files: dict[str, Path] = {}
+    if captions is not None:
+        files["caption"] = manager.save_upload(job.job_id, f"captions{_suffix(captions, '.vtt')}", await captions.read())
+    if slides is not None:
+        files["slide"] = manager.save_upload(job.job_id, f"slides{_suffix(slides, '.pdf')}", await slides.read())
     if transcript is not None:
         files["transcript"] = manager.save_upload(
             job.job_id, f"transcript{_suffix(transcript, '.pdf')}", await transcript.read()
+        )
+    if discussion is not None:
+        files["discussion"] = manager.save_upload(
+            job.job_id, f"discussion{_suffix(discussion, '.md')}", await discussion.read()
+        )
+    if quiz is not None:
+        files["quiz"] = manager.save_upload(job.job_id, f"quiz{_suffix(quiz, '.pdf')}", await quiz.read())
+    if quiz_solution is not None:
+        files["quiz_solution"] = manager.save_upload(
+            job.job_id, f"quiz_solution{_suffix(quiz_solution, '.pdf')}", await quiz_solution.read()
         )
 
     manager.start(job.job_id, files)
