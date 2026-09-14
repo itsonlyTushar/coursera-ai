@@ -2,3 +2,6 @@
 -r requirements.txt
 
 pytest>=8.0.0
+
+# Only for scripts/apply_supabase_sql.py (one-time local Supabase schema setup)
+psycopg2-binary>=2.9

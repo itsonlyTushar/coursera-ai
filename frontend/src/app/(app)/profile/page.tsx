@@ -305,9 +305,9 @@ export default function ProfilePage() {
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    "Deep Learning & Optimization",
-                    "Neural Networks: Backpropagation",
-                    "Multimodal AI & Transformers in Production",
+                    "Introductory Biology",
+                    "Molecular Genetics & Cell Biology",
+                    "Biochemistry: Metabolism & Bioenergetics",
                     "CS101: Data Structures Telemetry",
                   ].map((course, i) => (
                     <div

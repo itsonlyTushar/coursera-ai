@@ -193,12 +193,15 @@ class SupabaseService:
         )
 
     def list_curated_recommendations(self, limit: int = 12, offset: int = 0) -> list[dict[str, Any]]:
-        # Returns paginated recommendations with their source response/query/evidence so the UI can show full context.
+        # Returns paginated recommendations with their source response/query/evidence, plus any
+        # review decision (user_feedback.approval) so the UI can show a persisted accepted/rejected
+        # state instead of just the response's own status (which never reflects a review decision).
         return self._request(
             "GET",
             "/rest/v1/recommendations?select=*,generated_responses(query_id,generated_answer,"
             "response_status,user_queries(query_text),retrieval_evidence(qdrant_record_id,"
-            "content_type,evidence_text,similarity_score,retrieval_rank))"
+            "content_type,evidence_text,similarity_score,retrieval_rank),"
+            "user_feedback(approval,created_at))"
             f"&order=created_at.desc&limit={limit}&offset={offset}",
         )
 

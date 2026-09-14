@@ -41,7 +41,7 @@ export default function RegisterPage() {
   } = useForm<IngestFormValues>({
     defaultValues: {
       lecture_id: "",
-      course_id: "deeplearning",
+      course_id: "Intro_to_bio",
       owner: "",
       assets: [],
     },
@@ -54,7 +54,7 @@ export default function RegisterPage() {
   const onSubmit = (values: IngestFormValues) => {
     const formData = new FormData();
     formData.append("lecture_id", values.lecture_id);
-    formData.append("course_id", values.course_id || "deeplearning");
+    formData.append("course_id", values.course_id || "Intro_to_bio");
     if (values.owner) formData.append("owner", values.owner);
     // Each asset maps to its matching backend form field (captions/slides/transcript).
     for (const asset of values.assets) {
@@ -119,7 +119,7 @@ export default function RegisterPage() {
                   </FieldLabel>
                   <Input
                     id="course_id"
-                    placeholder="deeplearning"
+                    placeholder="Intro_to_bio"
                     disabled={isProcessing}
                     {...register("course_id")}
                   />

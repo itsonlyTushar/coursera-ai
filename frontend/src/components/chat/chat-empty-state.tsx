@@ -9,9 +9,9 @@ interface ChatEmptyStateProps {
 }
 
 const DEFAULT_SUGGESTIONS = [
-  "What are the common student misconceptions in backpropagation and gradient descent?",
-  "Where are students struggling most in transformer and attention architectures?",
-  "Suggest improvements and gaps in the current course based on 2026 deep learning trends",
+  "What are the common student misconceptions in cell biology and molecular genetics?",
+  "Where are students struggling most, based on assignment and exam performance?",
+  "Suggest improvements and gaps in the current biology course based on the discussion threads",
 ];
 
 export function ChatEmptyState({
