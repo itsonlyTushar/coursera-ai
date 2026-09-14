@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.schemas import (
-    ConversationCreateRequest,
     CurateRecommendationRequest,
     CurateRecommendationResponse,
     FeedbackResponse,
-    InteractionSaveRequest,
     ReviewFeedbackRequest,
     SynthesizeRequest,
     SynthesizeResponse,
@@ -23,44 +21,9 @@ def synthesize(
     rag_service: RagService = Depends(get_rag_service),
     supabase_service: SupabaseService = Depends(get_supabase_service),
 ) -> SynthesizeResponse:
-    # Runs the RAG pipeline then persists the query/answer/evidence (creating a conversation if needed) so chat is durable.
-    response, evidence, answer_text = rag_service.synthesize(request)
-
-    conversation_id = request.conversation_id
-    if not conversation_id:
-        conversation = supabase_service.create_conversation(
-            ConversationCreateRequest(
-                session_id=request.session_id or f"synthesize:{request.query[:64]}",
-                title=request.query[:80],
-                metadata={"created_by": "api_synthesize"},
-            )
-        )
-        conversation_id = conversation.conversation_id
-
-    saved = supabase_service.save_interaction(
-        InteractionSaveRequest(
-            conversation_id=conversation_id,
-            query_text=request.query,
-            generated_answer=answer_text,
-            normalized_topic=request.metadata.get("normalized_topic"),
-            detected_intent=request.metadata.get("detected_intent", "synthesis"),
-            model_name=request.model_name or "rag.synthesis",
-            model_provider=request.model_provider or "groq",
-            prompt_version=request.metadata.get("prompt_version"),
-            evidence=evidence,
-            metadata={
-                **(request.metadata or {}),
-                "status": "completed",
-                "retrieval_provider": "rag.retreival",
-                "synthesis_provider": "rag.synthesis",
-            },
-        )
-    )
-
-    response.insight_id = saved.response_id
-    response.conversation_id = saved.conversation_id
-    response.query_id = saved.query_id
-    return response
+    # Delegates the run-then-persist orchestration to the service layer, keeping the route
+    # itself focused on validation and dependency injection only.
+    return rag_service.synthesize_and_record(request, supabase_service)
 
 
 @router.post("/recommendations", response_model=CurateRecommendationResponse)

@@ -200,5 +200,21 @@ def _first_value(payload: dict[str, Any], *keys: str, default: str = "") -> str:
     return default
 
 
-# Global singleton pipeline instance
-pipeline = RetrievalPipeline()
+_pipeline_instance: RetrievalPipeline | None = None
+
+
+def get_retrieval_pipeline(collection_name: str | None = None) -> RetrievalPipeline:
+    # Lazy singleton provider so importing the module does not perform eager I/O
+    global _pipeline_instance
+    if _pipeline_instance is None:
+        _pipeline_instance = RetrievalPipeline(collection_name=collection_name)
+    return _pipeline_instance
+
+
+class _LazyPipelineProxy:
+    # Transparent proxy allowing `pipeline.retrieve_and_rerank()` without eager import-time construction
+    def __getattr__(self, name: str) -> Any:
+        return getattr(get_retrieval_pipeline(), name)
+
+
+pipeline: Any = _LazyPipelineProxy()

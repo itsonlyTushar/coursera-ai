@@ -19,10 +19,14 @@ from qdrant_client.models import (
 
 from src.config import PROCESSED_DIR, PROJECT_ROOT
 
+# Loaded before any os.getenv() calls below, so QDRANT_COLLECTION etc. actually resolve
+# from backend/.env instead of always falling back to the hardcoded default.
+load_dotenv(PROJECT_ROOT / ".env")
+
 DATABASE_DIR = PROCESSED_DIR / "databases"
 EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
 
-COLLECTION_NAME = "COURSEERA_ALMAX_MULTIMODAL"
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "COURSEERA_ALMAX_MULTIMODAL")
 MODEL_NAME ="BAAI/bge-base-en-v1.5"
 VECTOR_DIMENSIONS = 768
 UPLOAD_BATCH_SIZE = 100
@@ -35,9 +39,6 @@ DATABASE_CONTENT_TYPES = {
     "discussion_database": "discussion",
 }
 
-
-load_dotenv(PROJECT_ROOT / ".env")
-
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
@@ -47,7 +48,7 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
 def create_client()->QdrantClient:
     if not QDRANT_URL:
-        raise ValueError("QDRANT_RL IS MISSING FROM ENVIRONMENT (.env)")
+        raise ValueError("QDRANT_URL IS MISSING FROM ENVIRONMENT (.env)")
 
     if not QDRANT_API_KEY:
         raise ValueError("QDRANT_API_KEY IS MISSING FROM ENVIRONMENT (.env)")

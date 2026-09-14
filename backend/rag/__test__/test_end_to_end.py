@@ -2,7 +2,7 @@
 import json
 import os
 from dotenv import load_dotenv
-from retreival import pipeline
+from retrieval import pipeline
 from synthesis import synthesize_insight
 
 load_dotenv()

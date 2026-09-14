@@ -1,10 +1,13 @@
-# LLM Synthesis using the retreived documents/chunks from the retreival pipeline
+# LLM Synthesis using the retrieved documents/chunks from the retrieval pipeline
 import os
 import uuid
 from dotenv import load_dotenv
 from groq import Groq
 import instructor
 
+# Dual-mode import: package-style when imported as `rag.synthesis` (the backend app),
+# bare-style when run standalone as a script (setup_server.py's FastMCP CLI workflow,
+# invoked with rag/ itself as the working directory/sys.path root).
 try:
     from schema import EvidenceSegment, InsightRecommendation, InsightSynthesis
 except ImportError:

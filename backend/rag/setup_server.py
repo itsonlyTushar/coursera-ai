@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
 from schema import InsightRecommendation
-from retreival import pipeline
+from retrieval import pipeline
 from synthesis import synthesize_insight
 
 mcp = FastMCP("coursera-insight-pipeline")

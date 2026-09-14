@@ -9,7 +9,7 @@ inside a caller-provided working directory. The backend calls it as a
 background job.
 
 It deliberately reuses the granular, path-parameterized building blocks
-(extraction sub-functions, ``analyse_image``, ``combine_searchable_feilds`` and
+(extraction sub-functions, ``analyse_image``, ``combine_searchable_fields`` and
 the Qdrant helpers) so the points it upserts are identical in id and payload
 shape to the batch pipeline's.
 
@@ -43,7 +43,7 @@ from src.embedding_client import embed_texts
 from src.extraction import (
     create_caption_chunks,
     extract_slide_text,
-    extract_tarnscript_text,
+    extract_transcript_text,
     extract_vtt_captions,
 )
 from src.qdrant_db import (
@@ -54,7 +54,7 @@ from src.qdrant_db import (
     create_qdrant_collection,
     upload_points,
 )
-from src.visual_database import combine_searchable_feilds
+from src.visual_database import combine_searchable_fields
 
 
 ProgressCallback = Callable[[str, float, str], None]
@@ -100,7 +100,7 @@ def _extract_plain_text(lecture_id: str, path: Path, extracted_dir: Path) -> str
     # as a side effect, harmless for non-transcript uses); markdown/text files are read directly.
     path = Path(path)
     if path.suffix.lower() == ".pdf":
-        text_df, _instructor = extract_tarnscript_text(lecture_id, path, extracted_dir)
+        text_df, _instructor = extract_transcript_text(lecture_id, path, extracted_dir)
         return "\n\n".join(text_df["text"].fillna("").astype(str))
     return _read_text_file(path)
 
@@ -214,7 +214,7 @@ def _build_slide_records(
             "lecture_topic": row.get("lecture_topic"),
             **analysis,
         }
-        record["searchable_text"] = combine_searchable_feilds(pd.Series(record))
+        record["searchable_text"] = combine_searchable_fields(pd.Series(record))
         record["_embedding_text"] = record["searchable_text"]
         records.append(record)
         progress("visual_analysis", position / max(total, 1), f"analysed slide {position}/{total}")

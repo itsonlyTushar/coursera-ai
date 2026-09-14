@@ -30,7 +30,7 @@ backend/
 │   │       ├── health.py  metrics.py  dashboard.py  conversations.py  rag.py
 │   └── tests/               # pytest suite (runs without external services)
 ├── rag/                     # Standalone RAG pipeline + FastMCP server
-│   ├── retreival.py  synthesis.py  schema.py  setup_server.py
+│   ├── retrieval.py  synthesis.py  schema.py  setup_server.py
 ├── database/                # Bundled ingestion pipeline (src/, sql/) + offline batch tools
 │   ├── src/                 # extraction, embedding_client, ingest_service, qdrant_db, ...
 │   └── sql/                 # Supabase schema, views, RLS
