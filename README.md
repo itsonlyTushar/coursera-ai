@@ -1,6 +1,13 @@
 # Coursera Multimodal Intelligence Platform (MIP)
 
-Coursera-MIP is an AI-powered curriculum analytics and multimodal diagnostic engine. It indexes lecture videos, transcripts, and slides into a unified vector space, synthesizes pedagogical friction diagnostics via LLM reasoning, and delivers a human-in-the-loop recommendation escalation pipeline.
+Coursera-MIP is an AI-powered curriculum analytics and multimodal diagnostic engine. It
+indexes a course's full surface — lecture transcripts, slides, discussion threads, and
+quiz/exam questions with their official solutions — into a unified vector space, synthesizes
+pedagogical friction diagnostics via LLM reasoning (grounded, cited retrieval), and delivers
+a human-in-the-loop recommendation escalation pipeline for course staff to review, accept, or
+reject.
+
+See [`docs/architecture.md`](docs/architecture.md) for a system diagram (source: `docs/architecture.excalidraw`).
 
 ---
 
