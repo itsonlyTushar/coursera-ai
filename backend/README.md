@@ -55,17 +55,18 @@ HuggingFace/Cohere keys. Keep real secrets out of git.
 
 ### Supabase schema (one-time per project)
 
-A fresh Supabase project has none of the app's tables yet — `/api/synthesize` and friends
-will fail with `Could not find the table 'public.conversations'` until the schema is applied.
-Two ways to apply `database/sql/supabase_schema.sql` → `supabase_dashboard_views.sql` →
-`supabase_rls.sql` (in that order — views/policies depend on the tables):
+A fresh Supabase project doesn't have any of the app's tables yet, so `/api/synthesize` and
+friends will fail with `Could not find the table 'public.conversations'` until the schema is
+applied. Apply `database/sql/supabase_schema.sql` then `supabase_dashboard_views.sql` then
+`supabase_rls.sql`, in that order since the views and policies depend on the tables existing
+first. Two ways to do it:
 
-- **Supabase SQL Editor** — paste and run each file, in order.
-- **[`scripts/apply_supabase_sql.py`](scripts/apply_supabase_sql.py)** — runs all three
-  locally via a direct Postgres connection. Needs `SUPABASE_DB_URL` in `.env` (the
-  **Session Pooler** connection string from Supabase's Database settings — not
-  `SUPABASE_URL`/`SUPABASE_SECRET_KEY`, which are REST-API-only and can't run DDL) and
-  `pip install -r requirements-dev.txt`. Supports `--dry-run` to just test the connection.
+- **Supabase SQL Editor**: paste and run each file, in order.
+- **[`scripts/apply_supabase_sql.py`](scripts/apply_supabase_sql.py)**: runs all three
+  locally via a direct Postgres connection. Needs `SUPABASE_DB_URL` in `.env`, which is the
+  **Session Pooler** connection string from Supabase's Database settings (not
+  `SUPABASE_URL`/`SUPABASE_SECRET_KEY`, those are REST-API-only and can't run DDL), plus
+  `pip install -r requirements-dev.txt`. Pass `--dry-run` to just test the connection.
 
 ## Run
 
@@ -73,7 +74,7 @@ Two ways to apply `database/sql/supabase_schema.sql` → `supabase_dashboard_vie
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-*(Or specify the venv binary directly: `.venv\Scripts\python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`)*
+Or specify the venv binary directly: `.venv\Scripts\python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 
 Interactive API docs (Swagger UI, ReDoc, and the `/openapi.json` schema route) are
 disabled in [`app/main.py`](app/main.py). Re-enable them by removing the
@@ -94,52 +95,51 @@ Supabase, or LLM credentials.
 All application routes are prefixed with `/api`. These are exactly the endpoints the
 frontend uses.
 
-| Method & path | Purpose |
-| --- | --- |
-| `GET /health` | Liveness + which integrations are configured. |
-| `GET /api/metrics` | Live Qdrant collection health and content-type/course/model breakdowns (30s cached). |
-| `GET /api/dashboard/summary` | Aggregated Supabase dashboard views (activity, topics, evidence, lectures, feedback). |
-| `GET /api/conversations` | Recent conversations, newest first. |
-| `GET /api/conversations/{conversation_id}/messages` | Full transcript for one conversation (queries + nested responses/evidence/recommendations). |
-| `POST /api/synthesize` | Runs the RAG pipeline, then persists the query/answer/evidence (creating a conversation if none is supplied). Returns the cited insight. |
-| `POST /api/recommendations` | Saves a human-curated recommendation and marks its response `pending` for review. |
-| `GET /api/recommendations` | Paginated curated recommendations with their source context. |
-| `POST /api/review-feedback` | Records a reviewer's approve/reject decision against a response. |
-| `POST /api/ingest` | Multipart upload of a lecture's assets; stages them and starts a background ingestion job. Returns the job to poll. |
-| `GET /api/ingest` | Lists recent ingestion jobs. |
-| `GET /api/ingest/{job_id}` | Live status/progress of one ingestion job. |
-  
+| Method & path                                       | Purpose                                                                                                                                  |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /health`                                       | Liveness + which integrations are configured.                                                                                            |
+| `GET /api/metrics`                                  | Live Qdrant collection health and content-type/course/model breakdowns (30s cached).                                                     |
+| `GET /api/dashboard/summary`                        | Aggregated Supabase dashboard views (activity, topics, evidence, lectures, feedback).                                                    |
+| `GET /api/conversations`                            | Recent conversations, newest first.                                                                                                      |
+| `GET /api/conversations/{conversation_id}/messages` | Full transcript for one conversation (queries + nested responses/evidence/recommendations).                                              |
+| `POST /api/synthesize`                              | Runs the RAG pipeline, then persists the query/answer/evidence (creating a conversation if none is supplied). Returns the cited insight. |
+| `POST /api/recommendations`                         | Saves a human-curated recommendation and marks its response `pending` for review.                                                        |
+| `GET /api/recommendations`                          | Paginated curated recommendations with their source context.                                                                             |
+| `POST /api/review-feedback`                         | Records a reviewer's approve/reject decision against a response.                                                                         |
+| `POST /api/ingest`                                  | Multipart upload of a lecture's assets; stages them and starts a background ingestion job. Returns the job to poll.                      |
+| `GET /api/ingest`                                   | Lists recent ingestion jobs.                                                                                                             |
+| `GET /api/ingest/{job_id}`                          | Live status/progress of one ingestion job.                                                                                               |
 
 ## Online ingestion (`/api/ingest`)
 
-An educator uploads course material — captions (`.vtt`/`.srt`), slides (`.pdf`), transcript
-(`.pdf`/`.md`), discussion notes (`.md`), and/or a quiz/exam question set with its solutions
-(`.pdf`/`.md` each) — to `POST /api/ingest`. All six are optional but **at least one is
-required**: the project's purpose is finding where students struggle, so the full course
-surface matters — not every course ships slide decks or synced captions, and exam/assignment
-questions plus their official solutions are exactly the kind of evidence (expected answer vs.
-discussion confusion) the RAG layer needs. The backend stages the files to a per-job working
-directory and runs the pipeline **as a background job** — extract → Gemini visual analysis
-(slides only) → API embeddings → Qdrant upsert — while the request returns immediately with a
-`job_id` to poll via `GET /api/ingest/{job_id}`.
+An educator uploads course material to `POST /api/ingest`: captions (`.vtt`/`.srt`), slides
+(`.pdf`), transcript (`.pdf`/`.md`), discussion notes (`.md`), and/or a quiz/exam question set
+with its solutions (`.pdf`/`.md` each). All six are optional, but **at least one is required**.
+The whole point of this project is finding where students struggle, so the full course surface
+matters. Not every course ships slide decks or synced captions, and exam/assignment questions
+plus their official solutions are exactly the kind of evidence (expected answer vs. discussion
+confusion) the RAG layer needs. The backend stages the files to a per-job working directory and
+runs the pipeline **as a background job**: extract, then Gemini visual analysis (slides only),
+then API embeddings, then Qdrant upsert, while the request returns immediately with a `job_id`
+to poll via `GET /api/ingest/{job_id}`.
 
 - **Orchestration** lives in [`app/services/ingestion_service.py`](app/services/ingestion_service.py)
   (a thread-pool job manager with an injectable runner, so it is unit-tested without ML deps).
 - **The pipeline** lives in the bundled database package
-  ([`database/src/ingest_service.py`](database/src/ingest_service.py)) — a per-lecture runner
+  ([`database/src/ingest_service.py`](database/src/ingest_service.py)), a per-lecture runner
   that reuses the batch pipeline's building blocks (extraction, `analyse_image`, API embeddings,
   Qdrant helpers) and produces identical point ids/payloads. Transcript, discussion, and quiz
   text are all chunked and embedded, not just extracted and discarded. Quiz questions and
   solutions share `content_type="quiz"` (distinguished by a `role` payload field, since the
-  DB only allows a fixed set of content types) — transcript/discussion/quiz are already valid
-  end to end: Qdrant payload, the RAG service's normalizer, and the Supabase DB constraint.
+  DB only allows a fixed set of content types). Transcript, discussion, and quiz are already
+  valid end to end: Qdrant payload, the RAG service's normalizer, and the Supabase DB constraint.
   Frames are out of scope for v1 (disabled by default in the batch pipeline too), and slide
   images stay on local disk (uploading them to the private HF visual dataset is a separate step).
 - **[`scripts/batch_ingest.py`](scripts/batch_ingest.py)** drives this endpoint over HTTP for a
-  whole folder of course material at once — one lecture folder per unit, plus flat
+  whole folder of course material at once: one lecture folder per unit, plus flat
   question/solution containers like `assignments/`/`exams/` auto-paired by filename (no
   per-item subfolder needed). See [`database/courses/README.md`](database/courses/README.md).
-- **The pipeline is real and live-ready** — no mocks, no offline-only models. Embeddings run
+- **The pipeline is real and live-ready.** No mocks, no offline-only models. Embeddings run
   through the Hugging Face Inference API (same model the RAG side uses), visual analysis through
   the Gemini API, and points are upserted straight into the live Qdrant collection. The pipeline
   deps ship in `requirements.txt`, so a standard install runs ingestion:
@@ -147,8 +147,8 @@ directory and runs the pipeline **as a background job** — extract → Gemini v
   pip install -r requirements.txt
   ```
   A live run also needs the bundled `database/` package (now inside `backend/`) and the ingestion
-  credentials — `GEMINI_API_KEY`, `QDRANT_URL`/`QDRANT_API_KEY`, `HF_TOKEN` — set as environment
-  variables (or in `backend/database/.env` locally). Missing creds surface as a failed job with a
+  credentials (`GEMINI_API_KEY`, `QDRANT_URL`/`QDRANT_API_KEY`, `HF_TOKEN`) set as environment
+  variables, or in `backend/database/.env` locally. Missing creds surface as a failed job with a
   clear error (visible in the processing monitor), never a silent stub.
 - v1 keeps job state in memory and runs one job at a time (serial worker). A durable queue /
   external worker is the scaling path.
