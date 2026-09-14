@@ -46,7 +46,7 @@ def normalize_list_value(value: Any)->list:
 #------------------------------------------------------------------------------
 ##combining visual and textual evidence for embedding
 #------------------------------------------------------------------------------
-def combine_searchable_feilds(row: pd.Series) -> str:
+def combine_searchable_fields(row: pd.Series) -> str:
     searchable_fields = []
 
     ##text or text like feilds
@@ -77,6 +77,11 @@ def combine_searchable_feilds(row: pd.Series) -> str:
                                  if str(value).strip())
 
     return "\n".join(searchable_fields)
+
+
+# Backward-compatible alias for the original misspelled name — kept so any existing
+# caller (in this package or the online ingestion pipeline) keeps working unchanged.
+combine_searchable_feilds = combine_searchable_fields
 
 #---------------------------------------------------------------------------
 ## adding slide records
@@ -126,7 +131,7 @@ def build_slide_database(visual_analysis_df:pd.DataFrame) -> pd.DataFrame:
 
     slide_database_df['content_type'] = "slide"
 
-    slide_database_df['searchable_text'] = slide_database_df.apply(combine_searchable_feilds,axis=1)
+    slide_database_df['searchable_text'] = slide_database_df.apply(combine_searchable_fields,axis=1)
 
     return slide_database_df.sort_values(by=['lecture_id','slide_no']).reset_index(drop=True)
 
@@ -154,7 +159,7 @@ def build_frame_database(visual_analysis_df:pd.DataFrame) -> pd.DataFrame:
 
     frame_database_df['content_type'] = "frame"
 
-    frame_database_df['searchable_text'] = frame_database_df.apply(combine_searchable_feilds,axis=1)
+    frame_database_df['searchable_text'] = frame_database_df.apply(combine_searchable_fields,axis=1)
 
 
     ##kepping only those frame with instructional evidence

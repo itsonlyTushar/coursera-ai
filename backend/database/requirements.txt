@@ -11,4 +11,3 @@ qdrant-client
 langchain-huggingface
 langchain-core
 huggingface_hub
-supabase

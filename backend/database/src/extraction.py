@@ -137,7 +137,7 @@ def extract_instructor(transcript_text: str, ) -> str:
 #------------------------------------------------------------------------------
 ##EXTRACTING TRANSCRIPT TEXT
 #------------------------------------------------------------------------------
-def extract_tarnscript_text(lecture_id:str,
+def extract_transcript_text(lecture_id:str,
                             transcript_path:Path,
                             output_dir:Path)->tuple[pd.DataFrame,str]:
 
@@ -168,6 +168,11 @@ def extract_tarnscript_text(lecture_id:str,
     transcript_df.to_csv(output_dir / f"{lecture_id}_transcript.csv", index=False, encoding='utf-8-sig')
 
     return transcript_df,instructor
+
+
+# Backward-compatible alias for the original misspelled name — kept so any existing
+# caller (in this package or the online ingestion pipeline) keeps working unchanged.
+extract_tarnscript_text = extract_transcript_text
 
 #----------------------------------------------------------
 ##return first non_empty string
@@ -360,7 +365,7 @@ def extract_lecture_content(
 
     caption_chunk_df = create_caption_chunks(caption_df,output_dir)
 
-    transcript_df,instructor = extract_tarnscript_text(assets.lecture_id,
+    transcript_df,instructor = extract_transcript_text(assets.lecture_id,
                                                        assets.transcript_path,
                                                        output_dir)
 

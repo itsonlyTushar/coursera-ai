@@ -1254,66 +1254,23 @@ SUPABASE_URL=
 SUPABASE_SECRET_KEY=
 ```
 
-### Python Dependency
+### Backend Database Access
 
-Install the Supabase Python client:
+The live backend does not use a `database/src` Supabase helper — persistence is owned
+entirely by [`app/services/supabase_service.py`](../app/services/supabase_service.py)
+(`SupabaseService`), a pooled `httpx` client talking to Supabase's PostgREST API. This
+`database/` package's own Supabase touchpoint is only the SQL schema below; there is no
+Python client to import from here.
 
-```bash
-pip install supabase
-```
-
-The dependency is also included in `requirements.txt`.
-
-### Backend Database Helper
-
-The reusable Supabase helper is located at:
-
-```text
-src/supabase_db.py
-```
-
-Example initialization:
+Example (from the backend, not this package):
 
 ```python
-from src.supabase_db import SupabaseApplicationDB
+from app.services.supabase_service import get_supabase_service
 
-application_db = SupabaseApplicationDB()
-```
-
-The backend can use it to:
-
-```python
-conversation_id = application_db.create_conversation(
-    session_id="application-session-id",
-    title="Course assistance",
-)
-```
-
-After Qdrant retrieval and LLM generation:
-
-```python
-saved_interaction = application_db.save_rag_interaction(
-    conversation_id=conversation_id,
-    query_text=user_query,
-    normalized_topic=normalized_topic,
-    detected_intent=detected_intent,
-    generated_answer=generated_answer,
-    model_name=model_name,
-    model_provider=model_provider,
-    evidence=retrieved_evidence,
-    recommendations=generated_recommendations,
-)
-```
-
-Feedback can be stored separately:
-
-```python
-application_db.save_feedback(
-    response_id=saved_interaction["response_id"],
-    rating=5,
-    is_helpful=True,
-    approval="approved",
-)
+supabase_service = get_supabase_service()
+conversation = supabase_service.create_conversation(...)
+saved = supabase_service.save_interaction(...)
+supabase_service.save_feedback(...)
 ```
 
 ### SQL Definitions

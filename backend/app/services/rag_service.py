@@ -11,11 +11,14 @@ from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.schemas import (
     Citation,
+    ConversationCreateRequest,
     EvidenceContext,
     EvidenceSaveItem,
+    InteractionSaveRequest,
     SynthesizeRequest,
     SynthesizeResponse,
 )
+from app.services.supabase_service import SupabaseService
 
 
 logger = get_logger(__name__)
@@ -83,6 +86,50 @@ class RagService:
         )
         return response, evidence, answer_text
 
+    def synthesize_and_record(
+        self, request: SynthesizeRequest, supabase_service: SupabaseService
+    ) -> SynthesizeResponse:
+        # Orchestrates the full /synthesize flow: run the RAG pipeline, then persist the
+        # query/answer/evidence (creating a conversation if none was supplied). Keeps the
+        # HTTP route thin — validation and dependency injection only, no business logic.
+        response, evidence, answer_text = self.synthesize(request)
+
+        conversation_id = request.conversation_id
+        if not conversation_id:
+            conversation = supabase_service.create_conversation(
+                ConversationCreateRequest(
+                    session_id=request.session_id or f"synthesize:{request.query[:64]}",
+                    title=request.query[:80],
+                    metadata={"created_by": "api_synthesize"},
+                )
+            )
+            conversation_id = conversation.conversation_id
+
+        saved = supabase_service.save_interaction(
+            InteractionSaveRequest(
+                conversation_id=conversation_id,
+                query_text=request.query,
+                generated_answer=answer_text,
+                normalized_topic=request.metadata.get("normalized_topic"),
+                detected_intent=request.metadata.get("detected_intent", "synthesis"),
+                model_name=request.model_name or "rag.synthesis",
+                model_provider=request.model_provider or "groq",
+                prompt_version=request.metadata.get("prompt_version"),
+                evidence=evidence,
+                metadata={
+                    **(request.metadata or {}),
+                    "status": "completed",
+                    "retrieval_provider": "rag.retrieval",
+                    "synthesis_provider": "rag.synthesis",
+                },
+            )
+        )
+
+        response.insight_id = saved.response_id
+        response.conversation_id = saved.conversation_id
+        response.query_id = saved.query_id
+        return response
+
     def retrieve_chunks(self, query: str, top_k: int) -> list[dict[str, Any]]:
         # Runs dense retrieval + rerank via the rag pipeline, converting pipeline failures into HTTP 503s.
         pipeline = self._load_pipeline()
@@ -100,7 +147,7 @@ class RagService:
 
         self._prepare_rag_imports()
         try:
-            from rag.retreival import pipeline
+            from rag.retrieval import pipeline
         except Exception as exc:
             logger.error("Could not import rag retrieval pipeline: %s", exc)
             raise HTTPException(status_code=503, detail="Retrieval pipeline unavailable.") from exc

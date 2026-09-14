@@ -7,16 +7,18 @@ from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from qdrant_client import models
 
+# Loaded before any os.getenv() calls below, so QDRANT_COLLECTION etc. actually resolve
+# from backend/.env instead of always falling back to the hardcoded default.
+load_dotenv(PROJECT_ROOT / ".env")
+
 DATABASE_DIR = PROCESSED_DIR / "databases"
 
-HF_REPO_ID = "pranaybannu/COURSEERA_ALMAX_VISUALS"
+HF_REPO_ID = os.getenv("HF_VISUAL_REPO_ID", "pranaybannu/COURSEERA_ALMAX_VISUALS")
 HF_REPO_TYPE = "dataset"
 HF_REVISION = "main"
 
-COLLECTION_NAME = "COURSEERA_ALMAX_MULTIMODAL"
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "COURSEERA_ALMAX_MULTIMODAL")
 RETRIEVAL_BATCH_SIZE = 100
-
-load_dotenv(PROJECT_ROOT / ".env")
 
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
@@ -161,7 +163,7 @@ def validate_assets(assets:list[dict])->None:
 
 def create_client()->QdrantClient:
     if not QDRANT_URL:
-        raise ValueError("QDRANT_RL IS MISSING FROM ENVIRONMENT (.env)")
+        raise ValueError("QDRANT_URL IS MISSING FROM ENVIRONMENT (.env)")
 
     if not QDRANT_API_KEY:
         raise ValueError("QDRANT_API_KEY IS MISSING FROM ENVIRONMENT (.env)")
