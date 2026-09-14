@@ -23,7 +23,8 @@ backend/
 │   ├── services/            # Business logic / integrations
 │   │   ├── qdrant_service.py     # metrics (cached collection scan)
 │   │   ├── supabase_service.py   # persistence via a pooled httpx client
-│   │   └── rag_service.py        # bridge to the rag pipeline
+│   │   └── rag_service.py        # bridges the rag pipeline; synthesize_and_record()
+│   │                              # orchestrates run + persist so routes stay thin
 │   ├── api/
 │   │   ├── router.py        # aggregates all route modules
 │   │   └── routes/          # one module per domain
@@ -51,6 +52,20 @@ copy .env.example .env
 
 Fill `.env` with the Qdrant URL/collection/key, Supabase URL + secret key, Groq key, and
 HuggingFace/Cohere keys. Keep real secrets out of git.
+
+### Supabase schema (one-time per project)
+
+A fresh Supabase project has none of the app's tables yet — `/api/synthesize` and friends
+will fail with `Could not find the table 'public.conversations'` until the schema is applied.
+Two ways to apply `database/sql/supabase_schema.sql` → `supabase_dashboard_views.sql` →
+`supabase_rls.sql` (in that order — views/policies depend on the tables):
+
+- **Supabase SQL Editor** — paste and run each file, in order.
+- **[`scripts/apply_supabase_sql.py`](scripts/apply_supabase_sql.py)** — runs all three
+  locally via a direct Postgres connection. Needs `SUPABASE_DB_URL` in `.env` (the
+  **Session Pooler** connection string from Supabase's Database settings — not
+  `SUPABASE_URL`/`SUPABASE_SECRET_KEY`, which are REST-API-only and can't run DDL) and
+  `pip install -r requirements-dev.txt`. Supports `--dry-run` to just test the connection.
 
 ## Run
 
