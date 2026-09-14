@@ -16,6 +16,27 @@ export function mapToRecommendation(raw: any): Recommendation {
     metadata.title
   );
 
+  // A response's own status can never be "accepted"/"rejected" (the DB only allows
+  // pending/completed/failed/blocked for it) — the actual review decision lives in
+  // user_feedback.approval instead. Take the most recent feedback row, if any.
+  const feedbackList: any[] = generatedResponse.user_feedback || [];
+  const latestFeedback = feedbackList.length
+    ? [...feedbackList].sort(
+        (a, b) =>
+          new Date(b.created_at ?? 0).getTime() -
+          new Date(a.created_at ?? 0).getTime()
+      )[0]
+    : null;
+
+  const status: Recommendation["status"] =
+    latestFeedback?.approval === "approved"
+      ? "applied"
+      : latestFeedback?.approval === "rejected"
+      ? "rejected"
+      : generatedResponse.response_status === "pending"
+      ? "pending"
+      : "curated";
+
   return {
     id: raw.recommendation_id || raw.id || "",
     responseId: raw.response_id || generatedResponse.response_id || "",
@@ -27,14 +48,7 @@ export function mapToRecommendation(raw: any): Recommendation {
     timestamp: raw.created_at
       ? new Date(raw.created_at).toLocaleDateString()
       : "Recently",
-    status:
-      generatedResponse.response_status === "pending"
-        ? "pending"
-        : generatedResponse.response_status === "accepted"
-        ? "applied"
-        : generatedResponse.response_status === "rejected"
-        ? "rejected"
-        : "curated",
+    status,
     suggestedAction: raw.recommendation_text,
     citations: evidenceList.map((ev: any) => ({
       id: ev.qdrant_record_id || "",

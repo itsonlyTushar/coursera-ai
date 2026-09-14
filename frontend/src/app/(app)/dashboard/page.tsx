@@ -11,6 +11,7 @@ import { RefreshCw } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useMetrics } from "@/hooks/query/use-metrics";
 import { useDashboardSummary } from "@/hooks/query/use-dashboard-summary";
+import { useIngestionJobs } from "@/hooks/query/use-ingestion-jobs";
 import { DashboardStats } from "@/types";
 
 export default function DashboardPage() {
@@ -31,6 +32,13 @@ export default function DashboardPage() {
     isFetching: isSummaryFetching,
     refetch: refetchSummary,
   } = useDashboardSummary();
+
+  // CONSUME REAL INGESTION JOBS API
+  const {
+    isLoading: isIngestionLoading,
+    isFetching: isIngestionFetching,
+    refetch: refetchIngestion,
+  } = useIngestionJobs();
 
   const totalIndexed = metrics?.points_count ?? 0;
   const totalRecommendations =
@@ -64,19 +72,27 @@ export default function DashboardPage() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([refetchMetrics(), refetchSummary()]);
+      await Promise.all([
+        refetchMetrics(),
+        refetchSummary(),
+        refetchIngestion(),
+      ]);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const isSyncing = isRefreshing || isMetricsFetching || isSummaryFetching;
-
+  const isSyncing =
+    isRefreshing ||
+    isMetricsFetching ||
+    isSummaryFetching ||
+    isIngestionFetching;
 
   const isInitialLoading = isMetricsLoading || isSummaryLoading;
   const isStatsLoading = isInitialLoading || !metrics;
   const isPipelineLoading = isInitialLoading || !metrics;
   const isRecommendationsLoading = isInitialLoading || !summary;
+  const isProcessingMonitorLoading = isInitialLoading || isIngestionLoading;
 
   return (
     <div className="space-y-6 pb-10">
@@ -142,7 +158,7 @@ export default function DashboardPage() {
             Ingestion Processing Monitor
           </h2>
         </div>
-        <ProcessingMonitor />
+        <ProcessingMonitor isLoading={isProcessingMonitorLoading} />
       </section>
     </div>
   );

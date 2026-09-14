@@ -55,8 +55,10 @@ HuggingFace/Cohere keys. Keep real secrets out of git.
 ## Run
 
 ```bash
-.venv\Scripts\python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+*(Or specify the venv binary directly: `.venv\Scripts\python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`)*
 
 Interactive API docs (Swagger UI, ReDoc, and the `/openapi.json` schema route) are
 disabled in [`app/main.py`](app/main.py). Re-enable them by removing the

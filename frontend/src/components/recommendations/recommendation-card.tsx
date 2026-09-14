@@ -1,5 +1,7 @@
 import { Recommendation } from "@/types";
-import { Sparkles, Mail, Clock } from "lucide-react";
+import { Sparkles, Mail, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface RecommendationCardProps {
   item: Recommendation;
@@ -10,17 +12,37 @@ export function RecommendationCard({
   item,
   onSelect,
 }: RecommendationCardProps) {
+  const isRejected = item.status === "rejected";
+  const isApplied = item.status === "applied";
+
   return (
     <div
       onClick={() => onSelect(item)}
-      className="flex flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-xs transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 group cursor-pointer"
+      className={cn(
+        "flex flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-xs transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 group cursor-pointer",
+        isRejected && "opacity-60 hover:opacity-100"
+      )}
     >
       <div className="space-y-3">
         {/* HEADER TAGS */}
         <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {item.category}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {item.category}
+            </span>
+            {isRejected && (
+              <Badge variant="destructive">
+                <XCircle className="h-3 w-3" />
+                Rejected
+              </Badge>
+            )}
+            {isApplied && (
+              <Badge variant="success">
+                <CheckCircle2 className="h-3 w-3" />
+                Accepted
+              </Badge>
+            )}
+          </div>
           <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
             <Clock className="h-3 w-3" />
             {item.timestamp}
