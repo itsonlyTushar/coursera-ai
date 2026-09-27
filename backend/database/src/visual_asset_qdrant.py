@@ -1,27 +1,17 @@
 from pathlib import Path
 import pandas as pd
-from src.config import PROCESSED_DIR, PROJECT_ROOT
 import os
-import uuid
-from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from qdrant_client import models
 
-# Loaded before any os.getenv() calls below, so QDRANT_COLLECTION etc. actually resolve
-# from backend/.env instead of always falling back to the hardcoded default.
-load_dotenv(PROJECT_ROOT / ".env")
-
-DATABASE_DIR = PROCESSED_DIR / "databases"
+from src.qdrant_common import COLLECTION_NAME, create_client, create_point_id
+from src.database_io import load_database
 
 HF_REPO_ID = os.getenv("HF_VISUAL_REPO_ID", "pranaybannu/COURSEERA_ALMAX_VISUALS")
 HF_REPO_TYPE = "dataset"
 HF_REVISION = "main"
 
-COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "COURSEERA_ALMAX_MULTIMODAL")
 RETRIEVAL_BATCH_SIZE = 100
-
-QDRANT_URL = os.getenv("QDRANT_URL")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
 ASSET_PAYLOAD_FIELDS = {
     "asset_provider",
@@ -33,35 +23,6 @@ ASSET_PAYLOAD_FIELDS = {
 }
 
 UPDATE_BATCH_SIZE = 50
-
-
-#------------------------------------------------------------------------------
-##loading database
-#------------------------------------------------------------------------------
-
-def load_database(database_name:str)->pd.DataFrame:
-
-    database_path = DATABASE_DIR / f"{database_name}.csv"
-
-    if not database_path.exists():
-        raise FileNotFoundError(f"Database file not found: {database_path}")
-
-    database = pd.read_csv(database_path)
-
-    if database.empty:
-        raise ValueError(f"Database is empty: {database_name}")
-
-    if database['record_id'].isna().any():
-        raise ValueError(f"Missing record_id in {database_name} database")
-
-    if database['record_id'].duplicated().any():
-        raise ValueError(f"Duplicate record_id in {database_name} database")
-
-    return database
-
-#------------------------------------------------------------------------------
-## build slide assets
-#------------------------------------------------------------------------------
 
 def build_slide_assets(slide_database:pd.DataFrame)->list[dict]:
 
@@ -100,10 +61,6 @@ def build_slide_assets(slide_database:pd.DataFrame)->list[dict]:
         })
     return assets
 
-#------------------------------------------------------------------------------
-## build frame assets
-#------------------------------------------------------------------------------
-
 def build_frame_assets(frame_database:pd.DataFrame)->list[dict]:
 
     assets=[]
@@ -141,10 +98,6 @@ def build_frame_assets(frame_database:pd.DataFrame)->list[dict]:
         })
     return assets
 
-#------------------------------------------------------------------------------
-##validate assets
-#------------------------------------------------------------------------------
-
 def validate_assets(assets:list[dict])->None:
 
     record_ids = [asset['record_id'] for asset in assets]
@@ -156,32 +109,6 @@ def validate_assets(assets:list[dict])->None:
     if len(asset_paths) != len(set(asset_paths)):
         raise ValueError(f"Duplicate asset_paths in assets: {asset_paths}")
 
-
-#-------------------------------------------------------------------------------
-## client for interacting with qdrant
-#-------------------------------------------------------------------------------
-
-def create_client()->QdrantClient:
-    if not QDRANT_URL:
-        raise ValueError("QDRANT_URL IS MISSING FROM ENVIRONMENT (.env)")
-
-    if not QDRANT_API_KEY:
-        raise ValueError("QDRANT_API_KEY IS MISSING FROM ENVIRONMENT (.env)")
-    
-    return QdrantClient(url=QDRANT_URL,
-                        api_key=QDRANT_API_KEY,
-                        timeout=120)
-
-#-------------------------------------------------------------------------------
-# creating a point id
-#-------------------------------------------------------------------------------
-def create_point_id(record_id:str)->str:
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, record_id))
-
-
-#-------------------------------------------------------------------------------
-#read only qdrant match validation
-#-------------------------------------------------------------------------------
 
 def validate_qdrant_matches(client:QdrantClient,
                             assets:list[dict],)->None:
@@ -245,20 +172,12 @@ def validate_qdrant_matches(client:QdrantClient,
         raise ValueError("qdrant visual asset mismatch,validation failed, payloads update was not completed")
 
 
-#-------------------------------------------------------------------------------
-# # getting asset payloads
-# #------------------------------------------------------------------------------
-
 def get_asset_payload(asset:dict)->dict:
 
     return {
         key:asset[key]
         for key in ASSET_PAYLOAD_FIELDS
     }
-
-##-----------------------------------------------------------------------------
-## update sample assets
-##-----------------------------------------------------------------------------
 
 def update_all_visual_assets(client:QdrantClient,
                          assets:list[dict],)->None:
@@ -291,9 +210,6 @@ def update_all_visual_assets(client:QdrantClient,
 
         print(f"visual payload updated: {updated_count}/{len(assets)}")
 
-##-----------------------------------------------------------------------------#
-##validate sample assets
-##-----------------------------------------------------------------------------
 def validate_all_asset_payloads(client:QdrantClient,
                             assets:list[dict],)->None:
 
@@ -364,11 +280,7 @@ def validate_all_asset_payloads(client:QdrantClient,
         print("invalid qdrant records:",invalid_records[:3])
 
         raise ValueError("qdrant visual asset mismatch,validation failed, payloads update was not completed")
-        
 
-#------------------------------------------------------------------------------
-## main function
-#------------------------------------------------------------------------------
 
 def main()->None:
 
@@ -405,8 +317,6 @@ def main()->None:
     print("\n read only qdrant validation completed successfully")
     print("qdrant payloads and vectors were not updated")
 
-    #------------------------------------------------------------------------------
-
     point_count_before = client.count(COLLECTION_NAME,exact=True).count
 
     update_all_visual_assets(client=client,
@@ -425,6 +335,5 @@ def main()->None:
     print(f"point count after: {point_count_after}")
     print("allasset payloads updated successfully")
 
-#------------------------------------------------------------------------------
 if __name__ == "__main__":
     main()

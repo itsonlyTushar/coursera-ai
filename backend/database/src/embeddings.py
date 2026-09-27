@@ -1,118 +1,39 @@
-##GENERATING EMBEDDINGS FOR CAPTION, SLIDE AND FRAME DATABSES
+"""Generates embeddings for the caption, slide, and frame databases."""
 
 import json
 from pathlib import Path
+
 import pandas as pd
 
-from src.config import PROCESSED_DIR,EMBEDDING_MODEL,EMBEDDING_DIMENSIONS
+from src.config import EMBEDDING_MODEL,EMBEDDING_DIMENSIONS
 from src.embedding_client import embed_texts
+from src.database_io import EMBEDDING_DIR, load_database
+from src.checkpoints import append_jsonl_checkpoint, load_jsonl_checkpoint
 
-
-DATABASE_DIR = PROCESSED_DIR / "databases"
-EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
-
-##EMBEDDING BATCH SIZE
 EMBEDDING_BATCH_SIZE = 32
 
-
-
-#------------------------------------------------------------------------------\
-## loaading the database
-#------------------------------------------------------------------------------
-
-def load_database(database_name:str,) -> pd.DataFrame:
-
-    database_path = DATABASE_DIR / f"{database_name}.csv"
-
-    if not database_path.exists():
-        raise FileNotFoundError(f"Database file {database_path} not found")
-
-    database_df = pd.read_csv(database_path)
-
-
-    if database_df['record_id'].duplicated().any():
-        raise ValueError(f"Duplicate records found in {database_name} database")
-
-    return database_df
-
-
-#------------------------------------------------------------------------------
-## embeddig on textdata
-#------------------------------------------------------------------------------
 
 def embedding_text(database_df:pd.DataFrame,
                    database_name:str,) -> pd.DataFrame:
 
-
     database_df = database_df.copy()
-
 
     if database_name == 'caption_database':
 
         database_df['embedding_text'] =(
-            database_df['text'].fillna("").astype(str)  
+            database_df['text'].fillna("").astype(str)
         )
 
     else:
         database_df['embedding_text'] = (
             database_df['searchable_text'].fillna("").astype(str))
 
-    ##removing empty strings
     database_df = database_df[database_df['embedding_text'].str.strip() !=""].copy()
-
 
     return database_df.reset_index(drop=True)
 
-#------------------------------------------------------------------------------
-## embedding checkpoints
-#------------------------------------------------------------------------------
-
-def load_embedding_checkpoint(checkpoint_path:Path)->list[dict]:
-
-    ## loading successfullt generated embeddings
-
-    if not checkpoint_path.exists():
-        return []
-
-    records=[]
-
-    with open(checkpoint_path, "r", encoding='utf-8') as checkpoint_file:
-
-        for line_number,line in enumerate(checkpoint_file,start=1):
-            line = line.strip()
-
-            if not line:
-                continue
-            try:
-                records.append(json.loads(line))
-            except json.JSONDecodeError as e:
-                print(f"skipping invalid checkpoint line {line_number}: {line}")
-                continue
-    return records
-
-#------------------------------------------------------------------------------
-## appending successful embeddings
-#------------------------------------------------------------------------------
-
-def append_embedding_checkpoint(checkpoint_path:Path,records:dict)->None:
-
-    ##immediately saving the sucessfull embeddings to checkpoints
-    with open(checkpoint_path, "a", encoding='utf-8') as file:
-        file.write(json.dumps(records,ensure_ascii=False)+'\n')
-
-
-#------------------------------------------------------------------------------
-## GENERATE EMBEDDINGS PER BATCH
-#------------------------------------------------------------------------------
-
 def generate_embeddings(texts:list[str],) ->list[list[float]]:
-
-    ##Embeds via the HF Inference API (normalized) instead of a local model.
     return embed_texts(texts, batch_size=EMBEDDING_BATCH_SIZE).tolist()
-
-#------------------------------------------------------------------------------
-## GENERATE EMBEDDINGS FOR DATABASE
-#------------------------------------------------------------------------------
 
 def generate_database_embeddings(database_name:str,)->Path:
 
@@ -126,7 +47,7 @@ def generate_database_embeddings(database_name:str,)->Path:
 
     output_path = EMBEDDING_DIR / f"{database_name}_embeddings.json"
 
-    embedding_records = load_embedding_checkpoint(checkpoint_path)
+    embedding_records = load_jsonl_checkpoint(checkpoint_path)
 
     completed_ids ={record['record_id'] for record in embedding_records}
 
@@ -161,7 +82,7 @@ def generate_database_embeddings(database_name:str,)->Path:
                 'embedding_dimensions':EMBEDDING_DIMENSIONS,
                 'embedding':embedding,}
 
-            append_embedding_checkpoint(checkpoint_path,embedding_record)
+            append_jsonl_checkpoint(checkpoint_path,embedding_record)
 
             embedding_records.append(embedding_record)
 
@@ -175,9 +96,6 @@ def generate_database_embeddings(database_name:str,)->Path:
     print('saved embedding checkpoints to',output_path)
     return output_path
 
-#------------------------------------------------------------------------------
-## generate all database embeddings
-#------------------------------------------------------------------------------
 def generate_all_database_embeddings()->None:
     database_names = [
         'caption_database',

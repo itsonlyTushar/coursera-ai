@@ -1,13 +1,11 @@
-"""This module scans the four raw-data folders and matches each video, caption, transcript, and slide PDF by lecture number.
- It automatically discovers available lectures,  missing lec22 is simply absent."""
+"""Scans the four raw-data folders and matches each video, caption, transcript,
+and slide PDF by lecture number. Missing lectures (e.g. lec22) are simply absent."""
 
 import csv
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-
-## import config
 
 from src.config import(
     CAPTION_DIR,
@@ -17,9 +15,6 @@ from src.config import(
     MANIFEST_DIR,
     normalize_lecture_id,)
 
-#------------------------------------------------------------------------------
-##RAW FILES BELONG TO A LECTURE, EACH LECTURE IS IDENTIFIED BY LECTURE_ID
-#------------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class LectureAssets:
@@ -31,15 +26,13 @@ class LectureAssets:
 
     @property
     def is_complete(self)->bool:
-        """checking if all assets are available
-        and return trure if all four assetse exist"""
+        """True if video, slide, caption, and transcript are all present."""
 
         return all((self.video_path,
                     self.slide_path,
                     self.caption_path,
                     self.transcript_path))
 
-    ##if assets are missing,return the names of missing assets
     @property
     def missing_assets(self) -> list[str]:
         assets={
@@ -49,11 +42,6 @@ class LectureAssets:
             'transcript': self.transcript_path
         }
         return [name for name, path in assets.items() if not path]
-
-
-#------------------------------------------------------------------------------
-##extracting the normalized lecture ids from filename
-#------------------------------------------------------------------------------
 
 
 def extract_lecture_id(file_path:Path) -> Optional[str]:
@@ -67,13 +55,8 @@ def extract_lecture_id(file_path:Path) -> Optional[str]:
 
     return normalize_lecture_id(f"lec{matched.group(1)}")
 
-#------------------------------------------------------------------------------
-# indexing assets
-#------------------------------------------------------------------------------ 
-
 def index_assets(directory:Path,extensions:set[str],) -> dict[str,Path]:
-
-    """indexing files in one asset directory by lecture_id """
+    """Index files in one asset directory by lecture_id."""
     asset_index: dict[str,Path] = {}
 
     for file_path in directory.rglob("*"):
@@ -92,20 +75,15 @@ def index_assets(directory:Path,extensions:set[str],) -> dict[str,Path]:
         asset_index[lecture_id] = file_path
     return asset_index
 
-#------------------------------------------------------------------------------
-# discovering lecture assets
-#------------------------------------------------------------------------------
-
 def discover_lecture_assets() -> list[LectureAssets]:
-
-    """ discover and match asssets accross all raw_data folders. """
+    """Discover and match assets across all raw-data folders."""
 
     videos = index_assets(VIDEO_DIR, {".mp4", ".mkv", ".avi"})
     captions = index_assets(CAPTION_DIR, {".vtt", ".srt"})
     transcripts = index_assets(TRANSCRIPT_DIR, {".pdf"})
     slides = index_assets(SLIDE_DIR, {".pdf"})
 
-    ##including lecturew with partial missing assets.
+    # keep lectures with only some assets so missing files show up in the inventory
     lecture_ids = sorted(
         set(videos)
         |set(captions)
@@ -123,13 +101,8 @@ def discover_lecture_assets() -> list[LectureAssets]:
         transcript_path=transcripts.get(lecture_id),
     ) for lecture_id in lecture_ids]
 
-#------------------------------------------------------------------------------
-# saving lecture asset inventory
-#------------------------------------------------------------------------------
-
 def save_asset_inventory(lectures:list[LectureAssets]) -> Path:
-
-    """saving one consice invenory of discovered lecture assets """
+    """Save a CSV inventory of discovered lecture assets."""
 
     MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
     output_path = MANIFEST_DIR / "lecture_assets_inventory.csv"

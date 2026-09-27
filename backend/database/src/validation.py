@@ -1,54 +1,14 @@
-""" This performs one final check across:
-Source databases
-Embedding files
-Qdrant collection
-It confirms record counts, IDs, vector dimensions and Qdrant upload totals. """
+"""Final check across the source databases, embedding files, and Qdrant collection:
+record counts, IDs, vector dimensions, and upload totals must all line up."""
 
-import json
-import pandas as pd
-from src.config import PROCESSED_DIR
-from src.qdrant_db import COLLECTION_NAME,VECTOR_DIMENSIONS,create_qdrant_client
-
-DATABASE_DIR = PROCESSED_DIR / "databases"
-EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
+from src.qdrant_common import COLLECTION_NAME, VECTOR_DIMENSIONS, create_client as create_qdrant_client
+from src.database_io import load_database as load_database_records, load_embeddings as load_embedding_records
 
 DATABASE_NAMES = [
     'caption_database',
     'slide_database',
     'frame_database',
 ]
-
-#------------------------------------------------------------------------------
-# LOADING DATABASES
-#------------------------------------------------------------------------------
-
-def load_database_records(database_name:str) -> pd.DataFrame:
-
-    database_path = DATABASE_DIR / f"{database_name}.csv"
-
-    if not database_path.exists():
-        raise FileNotFoundError(f"Database file not found: {database_path}")
-
-    return pd.read_csv(database_path)
-
-#------------------------------------------------------------------------------
-# LOADING EMBEDDINGS
-#------------------------------------------------------------------------------
-def load_embedding_records(database_name:str) -> list[dict]:
-
-    embedding_path = EMBEDDING_DIR / f"{database_name}_embeddings.json"
-
-    if not embedding_path.exists():
-        raise FileNotFoundError(f"Embedding file not found: {embedding_path}")
-
-    with open(embedding_path,"r",encoding="utf-8") as file:
-        records = json.load(file)
-
-        return records
-
-#------------------------------------------------------------------------------
-# validate ids, counts, and vector dimensions
-#------------------------------------------------------------------------------
 
 def validate_one_database(database_name:str) -> dict:
 
@@ -95,12 +55,6 @@ def validate_one_database(database_name:str) -> dict:
     }
 
 
-
-#------------------------------------------------------------------------------
-# validate qdrant collection
-# confirming the final number of qdrant records
-#------------------------------------------------------------------------------
-
 def validate_qdrant(expected_total:int) -> dict:
 
     client = create_qdrant_client()
@@ -115,10 +69,6 @@ def validate_qdrant(expected_total:int) -> dict:
         'qdrant_points':qdrant_points,
         'valid':qdrant_points==expected_total,
     }
-
-#------------------------------------------------------------------------------
-# final project validate
-#------------------------------------------------------------------------------
 
 def run_final_validation()->None:
 

@@ -1,4 +1,3 @@
-##BUILDING STRUCTURED DATABASES FROM EXTRACTED LECTURE METADATA
 import json
 from pathlib import Path
 import pandas as pd
@@ -7,8 +6,6 @@ from src.config import PROCESSED_DIR,COURSE_ID
 CAPTION_SEGMENT_DIR = PROCESSED_DIR
 DATABASE_DIR = PROCESSED_DIR / "databases"
 
-
-##LOADING ALL CAPTION CHUNKS AND COMBINE ALL CHUNKS FROM ALL LECTURES
 
 def load_all_caption_chunks() -> pd.DataFrame:
 
@@ -27,7 +24,6 @@ def load_all_caption_chunks() -> pd.DataFrame:
     return pd.concat(caption_frame,ignore_index=True)
 
 
-##BUILDING CAPTION DATABASE
 def build_caption_database() ->pd.DataFrame:
 
     caption_df = load_all_caption_chunks()
@@ -40,14 +36,8 @@ def build_caption_database() ->pd.DataFrame:
     caption_df['module_id'] = lecture_numbers.map(lambda number: f"MOD_{number:02d}")
 
 
-    ##using chunk_id as the unique identifier for caption records
-
     caption_df['record_id'] = caption_df['chunk_id']
-
-    ##for source identification when records enter the vector database
     caption_df['content_type'] = 'caption'
-
-    ##necessary records for retreival and citations
 
     required_columns=[
         'record_id',
@@ -75,16 +65,11 @@ def build_caption_database() ->pd.DataFrame:
         raise ValueError(f"Missing columns: {missing_columns}")
 
     caption_database_df = caption_df[required_columns].copy()
-
-    ##sort records into lecture and timestamp order
     caption_database_df = caption_database_df.sort_values(by=['lecture_id','start_seconds']).reset_index(drop=True)
 
     return caption_database_df
 
-##saving caption database
 def save_caption_database(caption_database_df:pd.DataFrame)->tuple[Path,Path]:
-
-    ##saving caption database as a csv and json
 
     DATABASE_DIR .mkdir(parents=True, exist_ok=True)
 
@@ -106,7 +91,6 @@ if __name__ == "__main__":
 
     csv_output_path,json_output_path = save_caption_database(caption_database)
 
-    ## one consice validation
     print('caption database completed')
     print('caption records:',len(caption_database))
     print('duplicate record count:',caption_database.duplicated(subset=['record_id']).sum())
