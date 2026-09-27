@@ -11,8 +11,8 @@ import time
 import re
 import json
 
-from src.config import (MAX_API_RETRIES,PROCESSED_DIR, API_RETRY_DELAY, 
-                        PROJECT_ROOT, SOURCE_DIR,VISUAL_ANALYSIS_MODEL,
+from src.config import (MAX_API_RETRIES,PROCESSED_DIR, API_RETRY_DELAY,
+                        PROJECT_ROOT, VISUAL_ANALYSIS_MODEL,
                         generate_lecture_id)
 
 #------------------------------------------------------------------------------
@@ -260,47 +260,6 @@ def analyse_image(
 
     # At least one model was unavailable because of quota.
     raise AllVisualModelsQuotaExhausted("All configured visual models exhausted their quotas.") from last_quota_error
-    
-    
-
-#------------------------------------------------------------------------------
-## testin gemini api on  one frame and slide
-#------------------------------------------------------------------------------
-def test_gemini_visual_analysis() -> None:
-    master_dir = PROCESSED_DIR / "master"
-
-    slide_manifest_df = pd.read_csv(master_dir/'slide_manifest.csv')
-
-    frame_manifest_df = pd.read_csv(master_dir/'caption_linked_lecture_frames_manifest.csv')
-
-    test_slide = slide_manifest_df.iloc[0]
-
-    slide__result = analyse_image(
-        image_path=Path(test_slide['image_file_path']),
-        source_type="slide",
-        lecture_id=test_slide['lecture_id'],
-        record_label= (f"slide {int(test_slide['slide_no'])}"),
-    )
-
-    test_frame = frame_manifest_df.iloc[0]
-    frame_result = analyse_image(
-        image_path = Path(test_frame['frame_file_path']),
-        source_type="frame",
-        lecture_id=test_frame['lecture_id'],
-        record_label= test_frame['frame_id'],
-    )
-
-    print("slide test completed")
-
-    print("slide_category:", slide__result['content_category'])
-
-    print("slide instructional_evidence:", slide__result['is_instructional_evidence'])
-
-    print("\nframe test completed")
-
-    print("frame_category:", frame_result['content_category'])
-
-    print("frame instructional_evidence:", frame_result['is_instructional_evidence'])
 
 
 #------------------------------------------------------------------------------

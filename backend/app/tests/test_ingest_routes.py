@@ -49,7 +49,7 @@ def test_ingest_creates_and_runs_job(client, tmp_path):
 
     resp = client.post(
         "/api/ingest",
-        data={"lecture_id": "lec01", "course_id": "deeplearning"},
+        data={"lecture_id": "lec01", "course_id": "Intro_to_bio"},
         files=_files(),
     )
     assert resp.status_code == 200
@@ -89,8 +89,8 @@ def test_ingest_requires_at_least_one_asset(client, tmp_path):
     assert "at least one asset" in resp.json()["detail"].lower()
 
 
-# Asserts a lecture with only a transcript (no captions/slides) is accepted and staged —
-# not every course ships slide decks or synced captions.
+# Asserts a lecture with only a transcript (no captions/slides) is accepted and staged,
+# since many courses lack slide decks or synced captions.
 def test_ingest_accepts_transcript_only(client, tmp_path):
     manager = _manager(tmp_path)
     app.dependency_overrides[get_ingestion_manager] = lambda: manager
@@ -109,8 +109,8 @@ def test_ingest_accepts_transcript_only(client, tmp_path):
     assert not (manager.job_dir(job["job_id"]) / "captions.vtt").exists()
 
 
-# Asserts a quiz question set + its solutions (no captions/slides/transcript) is accepted —
-# exam/assignment evidence is exactly the "quiz + student answers" content the app needs.
+# Asserts a quiz question set + its solutions (no captions/slides/transcript) is accepted,
+# since exam/assignment evidence is exactly the "quiz + student answers" content the app needs.
 def test_ingest_accepts_quiz_and_solution_only(client, tmp_path):
     manager = _manager(tmp_path)
     app.dependency_overrides[get_ingestion_manager] = lambda: manager

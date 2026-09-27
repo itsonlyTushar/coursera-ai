@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 import json
 import pandas as pd
@@ -77,11 +76,6 @@ def combine_searchable_fields(row: pd.Series) -> str:
                                  if str(value).strip())
 
     return "\n".join(searchable_fields)
-
-
-# Backward-compatible alias for the original misspelled name — kept so any existing
-# caller (in this package or the online ingestion pipeline) keeps working unchanged.
-combine_searchable_feilds = combine_searchable_fields
 
 #---------------------------------------------------------------------------
 ## adding slide records

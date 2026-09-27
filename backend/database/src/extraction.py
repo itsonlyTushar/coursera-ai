@@ -16,8 +16,8 @@ import webvtt
 
 # NOTE: cv2 (opencv) is imported lazily inside the two functions that use it
 # (video metadata + reading a pre-existing slide image). This keeps the module
-# importable on hosts without opencv/libGL — the captions+slides ingestion path
-# never touches cv2, so an opencv-free deploy works.
+# importable on hosts without opencv/libGL, since the captions+slides ingestion
+# path never touches cv2, so an opencv-free deploy works.
 from src.config import (CAPTION_CHUNK_SIZE,CAPTION_OVERLAP_SIZE,lecture_output_dir)
 
 from src.discovery import LectureAssets
@@ -168,11 +168,6 @@ def extract_transcript_text(lecture_id:str,
     transcript_df.to_csv(output_dir / f"{lecture_id}_transcript.csv", index=False, encoding='utf-8-sig')
 
     return transcript_df,instructor
-
-
-# Backward-compatible alias for the original misspelled name — kept so any existing
-# caller (in this package or the online ingestion pipeline) keeps working unchanged.
-extract_tarnscript_text = extract_transcript_text
 
 #----------------------------------------------------------
 ##return first non_empty string

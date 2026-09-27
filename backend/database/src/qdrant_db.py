@@ -5,8 +5,7 @@ it stores embeddings and searches for records with similar meanings."""
 import json
 import os
 import uuid
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 import pandas as pd
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient

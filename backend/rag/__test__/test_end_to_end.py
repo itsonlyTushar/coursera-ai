@@ -1,6 +1,5 @@
 # End to End Testing of the whole Integrated RAG and LLM synthesis model wrapped in MCP
 import json
-import os
 from dotenv import load_dotenv
 from retrieval import pipeline
 from synthesis import synthesize_insight

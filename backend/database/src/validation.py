@@ -5,7 +5,6 @@ Qdrant collection
 It confirms record counts, IDs, vector dimensions and Qdrant upload totals. """
 
 import json
-from pathlib import Path
 import pandas as pd
 from src.config import PROCESSED_DIR
 from src.qdrant_db import COLLECTION_NAME,VECTOR_DIMENSIONS,create_qdrant_client

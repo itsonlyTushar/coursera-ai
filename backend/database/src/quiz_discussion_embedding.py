@@ -1,9 +1,8 @@
 ##GENERATING EMBEDDINGS FOR QUIZ AND DISCUSSION DATABASES
 import ast
-from pathlib import Path
 import json
 import pandas as pd
-from typing import Any, Optional
+from typing import Any
 from src.config import PROCESSED_DIR
 from src.embedding_client import embed_texts
 

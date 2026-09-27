@@ -17,7 +17,7 @@ def _suffix(upload: UploadFile, fallback: str) -> str:
 @router.post("/ingest", response_model=IngestJob)
 async def create_ingestion(
     lecture_id: str = Form(...),
-    course_id: str = Form("deeplearning"),
+    course_id: str = Form("Intro_to_bio"),
     owner: str | None = Form(None),
     captions: UploadFile | None = File(None),
     slides: UploadFile | None = File(None),

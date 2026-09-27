@@ -1,5 +1,5 @@
 """Unit tests for the pure, credential-free parts of the online ingestion pipeline
-(database/src/ingest_service.py) — lecture-id slugging and plain-text chunking for
+(database/src/ingest_service.py): lecture-id slugging and plain-text chunking for
 transcript/discussion assets. No Gemini/Qdrant/HF calls involved.
 """
 import sys
@@ -13,8 +13,8 @@ if str(DATABASE_DIR) not in sys.path:
 
 # ingest_service imports the (optional, ingestion-only) langchain-huggingface stack at
 # module level, so skip this whole file on a dev/test env that only has the base
-# requirements installed — matches the project's convention of not requiring ML deps
-# to run the test suite.
+# requirements installed. This matches the project's convention of not requiring ML
+# deps to run the test suite.
 try:
     from src.ingest_service import (
         _build_text_records,

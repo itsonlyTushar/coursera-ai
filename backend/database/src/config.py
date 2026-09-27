@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_ROOT= Path(__file__).resolve().parents[1]
 
 ##raw lectures
-SOURCE_DIR= PROJECT_ROOT / "deeplearning" 
+SOURCE_DIR= PROJECT_ROOT / "Intro_to_bio"
 CAPTION_DIR= SOURCE_DIR / "captions"
 SLIDE_DIR= SOURCE_DIR / "slides"
 TRANSCRIPT_DIR= SOURCE_DIR / "transcripts"
@@ -16,7 +16,7 @@ PROCESSED_DIR= PROJECT_ROOT / "processed"
 MANIFEST_DIR= PROJECT_ROOT / "manifests"
 
 ##COURSE SETTINGS
-COURSE_ID='deeplearning'
+COURSE_ID='Intro_to_bio'
 COURSE_OWNER='MIT_OPENCOURSEWARE'
 
 ##CAPTION CHUNKING

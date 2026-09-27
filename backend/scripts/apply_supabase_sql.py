@@ -1,4 +1,4 @@
-"""Applies the app's Supabase schema directly from your machine — no manual
+"""Applies the app's Supabase schema directly from your machine, without a manual
 copy/paste into the Supabase SQL Editor.
 
 Runs the three SQL files in backend/database/sql/ against your project's
@@ -7,8 +7,8 @@ This is a one-time setup step per Supabase project.
 
 Prerequisites
 -------------
-Add SUPABASE_DB_URL to backend/.env (NOT the SUPABASE_URL/SUPABASE_SECRET_KEY
-you already have — those are the REST API, which can't run DDL). Get the
+Add SUPABASE_DB_URL to backend/.env (not the SUPABASE_URL/SUPABASE_SECRET_KEY
+you already have, since those are the REST API and can't run DDL). Get the
 direct Postgres connection string from:
 
     Supabase Dashboard -> Project Settings -> Database -> Connection string

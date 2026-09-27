@@ -1,11 +1,10 @@
 ##GENERATING EMBEDDINGS FOR CAPTION, SLIDE AND FRAME DATABSES
 
 import json
-import time
 from pathlib import Path
 import pandas as pd
 
-from src.config import PROCESSED_DIR, PROJECT_ROOT,EMBEDDING_MODEL,EMBEDDING_DIMENSIONS
+from src.config import PROCESSED_DIR,EMBEDDING_MODEL,EMBEDDING_DIMENSIONS
 from src.embedding_client import embed_texts
 
 
