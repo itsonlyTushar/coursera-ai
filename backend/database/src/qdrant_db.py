@@ -1,44 +1,22 @@
-"""Qdrant is a vector database. Instead of searching only for matching words, 
-it stores embeddings and searches for records with similar meanings."""
-
+"""Builds Qdrant points from the caption/slide/frame databases and their
+embeddings, and uploads them to the collection."""
 
 import json
-import os
-import uuid
-from typing import Any
 import pandas as pd
-from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from qdrant_client.models import ( Distance,PointStruct,VectorParams)
 
-from src.config import (PROCESSED_DIR,PROJECT_ROOT)
+from src.qdrant_common import (
+    COLLECTION_NAME,
+    VECTOR_DIMENSIONS,
+    clean_payload_value,
+    create_client as create_qdrant_client,
+    create_point_id,
+)
+from src.database_io import DATABASE_DIR, EMBEDDING_DIR
 
-load_dotenv(PROJECT_ROOT / ".env")
-
-DATABASE_DIR = PROCESSED_DIR / "databases"
-EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
-# Honors QDRANT_COLLECTION so a throwaway test collection can be targeted without
-# touching production; defaults to the live collection when unset.
-COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "COURSEERA_ALMAX_MULTIMODAL")
-VECTOR_DIMENSIONS = 768
 UPLOAD_BATCH_SIZE = 100
 
-QDRANT_URL = os.getenv("QDRANT_URL","http://localhost:6333")
-
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-
-#------------------------------------------------------------------------------
-## connecting to qdrant (local or cloud)
-#------------------------------------------------------------------------------
-
-def create_qdrant_client()->QdrantClient:
-
-    return QdrantClient(url=QDRANT_URL,api_key=QDRANT_API_KEY,timeout=120,)
-
-
-#------------------------------------------------------------------------------
-##Creating a collection
-#------------------------------------------------------------------------------
 
 def create_qdrant_collection(client:QdrantClient)->None:
 
@@ -50,9 +28,7 @@ def create_qdrant_collection(client:QdrantClient)->None:
     if COLLECTION_NAME in existing_collections:
         print("using existing collection",COLLECTION_NAME)
         return
-    
 
-    ##creating a new collection
     client.create_collection(
         collection_name=COLLECTION_NAME,
         vectors_config=VectorParams(
@@ -63,55 +39,12 @@ def create_qdrant_collection(client:QdrantClient)->None:
     print("created collection",COLLECTION_NAME)
 
 
-#------------------------------------------------------------------------------
-## creating a stable UUid from database record id
-#------------------------------------------------------------------------------
-
-def create_point_id(record_id:str)->str:
-    return str(
-        uuid.uuid5(
-            uuid.NAMESPACE_URL,
-            record_id,
-        )
-    )
-
-# ------------------------------------------------------------------------------
-##converting pandas and missing values to qdrant compatible types
-# ------------------------------------------------------------------------------
-
-def clean_payload_value(value: Any) -> Any:
-    """Convert pandas/NumPy values into Qdrant-compatible values."""
-
-    if value is None:
-        return None
-
-    if isinstance(value, (list, dict)):
-        return value
-
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        pass
-
-    if isinstance(value, (bool, int, float, str)):
-        return value
-
-    if hasattr(value, "item"):
-        return value.item()
-    
-    return str(value).strip() 
-
-# ------------------------------------------------------------------------------
-## loading database records indexed by record_id
-# ------------------------------------------------------------------------------
-
 def load_database_records(database_name:str) -> dict[str,dict]:
 
     database_path = DATABASE_DIR / f"{database_name}.csv"
 
     database_df = pd.read_csv(database_path)
-    
+
     records = {}
 
     for record in database_df.to_dict(orient='records'):
@@ -125,10 +58,6 @@ def load_database_records(database_name:str) -> dict[str,dict]:
 
     return records
 
-#------------------------------------------------------------------------------
-# laoding embeddings
-#------------------------------------------------------------------------------
-
 def load_embedding_records(database_name:str) -> list[dict]:
 
     embedding_path = EMBEDDING_DIR / f"{database_name}_embeddings.json"
@@ -140,10 +69,6 @@ def load_embedding_records(database_name:str) -> list[dict]:
         records = json.load(file)
 
         return records
-
-#------------------------------------------------------------------------------
-# building qdrant points, combining vectors with their database metadata
-#------------------------------------------------------------------------------
 
 def build_qdrant_points(database_name:str) -> list[PointStruct]:
 
@@ -177,10 +102,6 @@ def build_qdrant_points(database_name:str) -> list[PointStruct]:
 
     return qdrant_points
 
-#------------------------------------------------------------------------------
-# uploading point in batches
-#------------------------------------------------------------------------------
-
 def upload_points(client:QdrantClient,points:list[PointStruct]) -> None:
 
     for batch_start in range(0,len(points),UPLOAD_BATCH_SIZE):
@@ -196,9 +117,6 @@ def upload_points(client:QdrantClient,points:list[PointStruct]) -> None:
         print(f"uploaded {upload_count}/{len(points)} points")
 
 
-#------------------------------------------------------------------------------
-## uploading all embeddings to qdrant collection
-#------------------------------------------------------------------------------
 def upload_all_embeddings()->None:
     client = create_qdrant_client()
 

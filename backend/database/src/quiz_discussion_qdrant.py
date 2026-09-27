@@ -1,12 +1,6 @@
-##uploading quizz and discussion records to qdrant
-import ast
-import json
-import os
-import uuid
-from typing import Any
-from dotenv import load_dotenv
-from qdrant_client import QdrantClient
+"""Uploads quiz and discussion records to Qdrant."""
 import pandas as pd
+from qdrant_client import QdrantClient
 
 from qdrant_client.models import (
     FieldCondition,
@@ -16,18 +10,17 @@ from qdrant_client.models import (
     PointStruct,
 )
 
-from src.config import PROCESSED_DIR, PROJECT_ROOT
+from src.qdrant_common import (
+    COLLECTION_NAME,
+    MODEL_NAME,
+    VECTOR_DIMENSIONS,
+    clean_payload_value,
+    create_client,
+    create_point_id,
+    parse_serialized_value,
+)
+from src.database_io import load_database, load_embeddings
 
-# Loaded before any os.getenv() calls below, so QDRANT_COLLECTION etc. actually resolve
-# from backend/.env instead of always falling back to the hardcoded default.
-load_dotenv(PROJECT_ROOT / ".env")
-
-DATABASE_DIR = PROCESSED_DIR / "databases"
-EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
-
-COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "COURSEERA_ALMAX_MULTIMODAL")
-MODEL_NAME ="BAAI/bge-base-en-v1.5"
-VECTOR_DIMENSIONS = 768
 UPLOAD_BATCH_SIZE = 100
 
 DATABASE_CONTENT_TYPES = {
@@ -37,152 +30,6 @@ DATABASE_CONTENT_TYPES = {
     "quiz_database": "quiz",
     "discussion_database": "discussion",
 }
-
-QDRANT_URL = os.getenv("QDRANT_URL")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-
-#------------------------------------------------------------------------------
-## client for interacting with qdrant
-#------------------------------------------------------------------------------
-
-def create_client()->QdrantClient:
-    if not QDRANT_URL:
-        raise ValueError("QDRANT_URL IS MISSING FROM ENVIRONMENT (.env)")
-
-    if not QDRANT_API_KEY:
-        raise ValueError("QDRANT_API_KEY IS MISSING FROM ENVIRONMENT (.env)")
-
-    return QdrantClient(url=QDRANT_URL,
-                        api_key=QDRANT_API_KEY,
-                        timeout=120)
-
-#------------------------------------------------------------------------------
-# creating a point id
-#------------------------------------------------------------------------------
-
-def create_point_id(record_id:str)->str:
-
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, record_id))
-
-#------------------------------------------------------------------------------
-##PARSING SERIALIZED VALUES INTO READABLE TEXT
-#------------------------------------------------------------------------------
-
-def parse_serialized_value(value: Any) -> Any:
-
-    if value is None:
-        return None
-
-    if isinstance(value, (list, dict)):
-        return value
-    
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        pass
-
-    if not isinstance(value, str):
-        return value
-
-    value = value.strip()
-
-    if not value:
-        return None
-
-    if value.startswith(('[', '{')):
-        try:
-            return ast.literal_eval(value)
-        except (SyntaxError, ValueError):
-            return value
-
-    return value
-
-
-#------------------------------------------------------------------------------
-#clean the payload for qdrant
-#------------------------------------------------------------------------------
-
-def clean_payload_value(value: Any) -> Any:
-
-    if value is None:
-        return None
-
-    if isinstance(value, dict):
-        return {
-            str(key): clean_payload_value(item)
-            for key, item in value.items()
-        }
-
-    if isinstance(value, (list,tuple)):
-        return [
-            clean_payload_value(item)
-            for item in value
-        ]
-
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        pass
-
-    if isinstance(value, (bool,int,float,str)):
-        return value
-
-    if hasattr(value,"item"):
-        return value.item()
-
-    return str(value)
-
-#------------------------------------------------------------------------------
-##loading database
-#------------------------------------------------------------------------------
-
-def load_database(database_name:str)->pd.DataFrame:
-
-    database_path = DATABASE_DIR / f"{database_name}.csv"
-
-    if not database_path.exists():
-        raise FileNotFoundError(f"Database file not found: {database_path}")
-
-    
-    database_df = pd.read_csv(database_path)
-
-    if database_df.empty:
-        raise ValueError(f"Database is empty: {database_name}")
-    
-
-    if database_df['record_id'].isna().any():
-        raise ValueError(f"Missing record_id in {database_name} database")
-    
-    if database_df['record_id'].duplicated().any():
-        raise ValueError(f"Duplicate record_id in {database_name} database")
-
-    return database_df
-
-#------------------------------------------------------------------------------
-#loading embeddings
-#------------------------------------------------------------------------------
-
-def load_embeddings(database_name:str,
-                    expected_count:int)->list[dict]:
-    embedding_path = EMBEDDING_DIR / f"{database_name}_embeddings.json"
-
-    if not embedding_path.exists():
-        raise FileNotFoundError(f"Embedding file not found: {embedding_path}")
-
-    with open(embedding_path,'r',encoding='utf-8') as file:
-        embedding_records = json.load(file)
-
-
-    if len(embedding_records) != expected_count:
-        raise ValueError(f"Expected {expected_count} records in {database_name} database, found {len(embedding_records)}")
-
-    return embedding_records
-
-##-----------------------------------------------------------------------------
-##preparing payload for qdrant
-##-----------------------------------------------------------------------------
 
 def prepare_payload(row:dict,
                     content_type:str,
@@ -217,9 +64,6 @@ def prepare_payload(row:dict,
 
     return payload
 
-#------------------------------------------------------------------------------
-#building points
-#------------------------------------------------------------------------------
 def build_points(database_name:str,
                  content_type:str,)->list[PointStruct]:
 
@@ -275,10 +119,6 @@ def build_points(database_name:str,
         
     return points
 
-##-----------------------------------------------------------------------------
-##uploading to qdrant
-##-----------------------------------------------------------------------------
-
 def upload_points(
         client:QdrantClient,
         points: list[PointStruct],
@@ -297,13 +137,9 @@ def upload_points(
 
         print(f"{content_type} uploaded: {uploaded}/{len(points)}")
 
-##-----------------------------------------------------------------------------
-##ENSURING CONTENT TYPES INDEX FOR MATCHLABELS
-##-----------------------------------------------------------------------------
 def ensure_content_type_index(
     client: QdrantClient,) -> None:
-    """ensures the content_type keyword index exists"""
-
+    """Ensure the content_type keyword index exists."""
 
     collection_info = client.get_collection(
         COLLECTION_NAME
@@ -323,9 +159,6 @@ def ensure_content_type_index(
     print("created content_type keyword index")
 
 
-#------------------------------------------------------------------------------
-# counting the content types
-#------------------------------------------------------------------------------
 def count_content_types(client:QdrantClient,
                         content_type:str)->int:
 
@@ -344,10 +177,6 @@ def count_content_types(client:QdrantClient,
     return result.count
 
 
-##-----------------------------------------------------------------------------
-##main function
-##-----------------------------------------------------------------------------
-
 def main()->None:
 
     client = create_client()
@@ -365,7 +194,6 @@ def main()->None:
     expected_counts = {}
     all_record_ids=[]
 
-#------------------------------------------------------------------------------
     for database_name,content_type in DATABASE_CONTENT_TYPES.items():
 
         database_df = load_database(database_name)
@@ -380,8 +208,6 @@ def main()->None:
     if duplicate_ids:
         raise ValueError(f"duplicate record_ids in qdrant: {duplicate_ids[:10]}")
 
-#------------------------------------------------------------------------------
-    
     expected_final_count = sum(expected_counts.values())
 
     current_count = {
@@ -401,8 +227,6 @@ def main()->None:
     print('current content counts:',current_count)
     print('expected final content counts:',expected_counts)
     print('expected final count:',expected_final_count)
-#------------------------------------------------------------------------------
-
 
     for content_type in ('caption','slide','frame'):
 
@@ -420,7 +244,7 @@ def main()->None:
 
     if before_count != known_curr_total:
         raise ValueError(f"the collection contains points with missing or unexpected content types:")
-    
+
     quiz_points = build_points(database_name="quiz_database",
                                content_type="quiz")
 
@@ -433,8 +257,6 @@ def main()->None:
 
     if len(discussion_points) != expected_counts['discussion']:
         raise ValueError(f"unexpected discussion point count: {len(discussion_points)}")
-
-#------------------------------------------------------------------------------
 
     upload_points(client,
                   quiz_points,
@@ -465,7 +287,5 @@ def main()->None:
     print('\n quiz and discussion qdrant intergartion completed successfully')
 
 
-
-#------------------------------------------------------------------------------
 if __name__ == "__main__":
     main()

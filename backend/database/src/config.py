@@ -1,29 +1,23 @@
 import re
 from pathlib import Path
 
-##project directory
 PROJECT_ROOT= Path(__file__).resolve().parents[1]
 
-##raw lectures
 SOURCE_DIR= PROJECT_ROOT / "Intro_to_bio"
 CAPTION_DIR= SOURCE_DIR / "captions"
 SLIDE_DIR= SOURCE_DIR / "slides"
 TRANSCRIPT_DIR= SOURCE_DIR / "transcripts"
 VIDEO_DIR= SOURCE_DIR / "videos"
 
-##GENERATED OUTPUTS
 PROCESSED_DIR= PROJECT_ROOT / "processed"
 MANIFEST_DIR= PROJECT_ROOT / "manifests"
 
-##COURSE SETTINGS
 COURSE_ID='Intro_to_bio'
 COURSE_OWNER='MIT_OPENCOURSEWARE'
 
-##CAPTION CHUNKING
 CAPTION_CHUNK_SIZE= 200
 CAPTION_OVERLAP_SIZE= 3
 
-##GEMINI SETTINGS
 VISUAL_ANALYSIS_MODEL= ["gemini-3.5-flash-lite",'gemini-3.1-flash-lite',"gemma-4-26b-a4b-it"]
 
 unavailable_models: set[str] = set()
@@ -31,9 +25,8 @@ EMBEDDING_MODEL= "BAAI/bge-base-en-v1.5"
 EMBEDDING_DIMENSIONS= 768
 
 MAX_API_RETRIES= 3
-API_RETRY_DELAY= 12 # second
+API_RETRY_DELAY= 12 # seconds
 
-##REUSBLE LECTURE ID GENERATION
 def normalize_lecture_id(value:str)->str:
     """convert values like lec2 or lecture_02 to lec02."""
     matched = re.search(r"\d+", value)
@@ -57,7 +50,6 @@ def generate_lecture_id(lecture_id:int)->str:
         "slide_asset_id": f"SLIDE_LEC{lecture_number:02d}",
     }
 
-##lecture output directory
 def lecture_output_dir(lecture_id:str)->Path:
     """return the processed output directory for a given lecture"""
     normalized_id = normalize_lecture_id(lecture_id)

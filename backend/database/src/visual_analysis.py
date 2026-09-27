@@ -14,10 +14,7 @@ import json
 from src.config import (MAX_API_RETRIES,PROCESSED_DIR, API_RETRY_DELAY,
                         PROJECT_ROOT, VISUAL_ANALYSIS_MODEL,
                         generate_lecture_id)
-
-#------------------------------------------------------------------------------
-##gemini clientS
-#------------------------------------------------------------------------------
+from src.checkpoints import append_jsonl_checkpoint, load_jsonl_checkpoint
 
 load_dotenv(PROJECT_ROOT / ".env")
 
@@ -29,30 +26,23 @@ if not gemini_api_key:
 client = genai.Client(api_key=gemini_api_key)
 
 
-#------------------------------------------------------------------------------
-##starndard gemini output schema
-#------------------------------------------------------------------------------
-
 class VisualAnalysis(BaseModel):
-    summary:str                      ##for summary of the slide, string (mostly one liner)
-    visual_types:list[str]                 #for indicating the type of visual --> graph, image, flowchart
-    visual_text: str                      ##visual descriptor
-    diagram_explanation: Optional[str]    ##for detail explanation of diagram , None or text
-    graph_explanation:Optional[str]       ##for explaing graph none or text
-    equations:list[str]                   ## list containing equations and their meaning
-    key_concepts:list[str]                 ## list of key concepts explained in the slide
-    visual_text_relation:str              ## explains how visual types support text/written explanation
-    content_category:str                  ##for indicating the content category
-    needs_human_review: bool             ##True or
-    is_instructional_evidence: bool      ##True or
+    summary:str
+    visual_types:list[str]
+    visual_text: str
+    diagram_explanation: Optional[str]
+    graph_explanation:Optional[str]
+    equations:list[str]
+    key_concepts:list[str]
+    visual_text_relation:str
+    content_category:str
+    needs_human_review: bool
+    is_instructional_evidence: bool
 
 class AllVisualModelsQuotaExhausted(RuntimeError):
     "raised when all models are exhausted"
     pass
 
-#------------------------------------------------------------------------------#
-# prompt creation for a slide or frame
-# ------------------------------------------------------------------------------#
 def create_visual_prompt(
         source_type: str,
         lecture_id: str,
@@ -116,10 +106,6 @@ def create_visual_prompt(
         - Set needs_human_review to True when the frame is unclear
         or its evidence value is uncertain."""
 
-#------------------------------------------------------------------------------##
-# analyse one visual record using gemini
-#------------------------------------------------------------------------------##
-
 def analyse_image(
         image_path: Path,
         source_type:str,
@@ -142,11 +128,10 @@ def analyse_image(
 
     for model_name in VISUAL_ANALYSIS_MODEL:
 
-        ##skipping models that are unavailable
         if model_name in unavailable_models:
             continue
 
-        switch_without_disabling = False ##for other errors
+        switch_without_disabling = False  # set when the error isn't a quota issue
 
         for retry_number in range(1,MAX_API_RETRIES+1):
 
@@ -175,8 +160,7 @@ def analyse_image(
                         response.text
                     )
 
-                # Some SDK/model combinations return an already parsed result.
-                ## this is for gemma model
+                # Gemma returns an already-parsed result instead of text.
                 elif getattr(response, "parsed", None) is not None:
                     parsed_response = response.parsed
 
@@ -262,10 +246,6 @@ def analyse_image(
     raise AllVisualModelsQuotaExhausted("All configured visual models exhausted their quotas.") from last_quota_error
 
 
-#------------------------------------------------------------------------------
-## create visual processing queue
-#------------------------------------------------------------------------------
-
 def create_visual_processing_queue()->list[dict]:
     """combine all slide and caption linked frame records"""
     master_dir = PROCESSED_DIR / "master"
@@ -305,7 +285,6 @@ def create_visual_processing_queue()->list[dict]:
             'record_label':f"slide {slide_number}",
         })
 
-    ##adding all sucessfully extracted caption_linked_frames
     completed_frames = frame_manifest_df[frame_manifest_df['extraction_status']=='complete']
 
     for _,frame in completed_frames.iterrows():
@@ -324,48 +303,6 @@ def create_visual_processing_queue()->list[dict]:
 
     return processing_queue
 
-#------------------------------------------------------------------------------
-##checkpoints json
-#------------------------------------------------------------------------------
-
-def load_visual_checkpoints(checkpoint_path:Path)->list[dict]:
-    """load checkpoints from json file"""
-    if not checkpoint_path.exists():
-        return []
-
-    records=[]
-
-    with open(checkpoint_path, "r", encoding='utf-8') as checkpoint_file:
-
-        for line_number,line in enumerate(checkpoint_file,start=1):
-
-            line = line.strip()
-
-            if not line:
-                continue
-
-            try:
-                records.append(json.loads(line))
-            except json.JSONDecodeError:
-                print(f"skipping invalid checkpoint line {line_number}: {line}")
-
-    return records
-
-#------------------------------------------------------------------------------
-##appendding one successfull gemini result
-#------------------------------------------------------------------------------
-
-def append_visual_checkpoints(checkpoint_path:Path,records:dict)->None:
-
-    with open(checkpoint_path, "a", encoding='utf-8') as file:
-
-        file.write(json.dumps(records,ensure_ascii=False)+'\n')
-
-
-#------------------------------------------------------------------------------
-## analyse all slides and caption linked frames
-#------------------------------------------------------------------------------
-
 def run_complete_visual_analysis()->pd.DataFrame:
     """run visual analysis on all slides and caption linked frames"""
 
@@ -379,12 +316,9 @@ def run_complete_visual_analysis()->pd.DataFrame:
 
     processing_queue = create_visual_processing_queue()
 
-    results = load_visual_checkpoints(checkpoint_path)
+    results = load_jsonl_checkpoint(checkpoint_path)
 
     completed_ids ={record['visual_record_id'] for record in results}
-
-
-    ##models added here are skipped if they are unavailable
 
     unavailable_models: set[str] = set()
 
@@ -413,8 +347,6 @@ def run_complete_visual_analysis()->pd.DataFrame:
                 unavailable_models=unavailable_models,
             )
 
-            ##adding database linking metadata
-
             analysis.update({
                 "visual_record_id":visual_record_id,
                 'source_type':record['source_type'],
@@ -427,15 +359,13 @@ def run_complete_visual_analysis()->pd.DataFrame:
                 'image_file_path':record['image_file_path'],
             })
 
-            ##save immdediately to avoid quota errors
-
-            append_visual_checkpoints(checkpoint_path,analysis)
+            # save immediately so progress survives a quota error or crash
+            append_jsonl_checkpoint(checkpoint_path,analysis)
 
             results.append(analysis)
 
             completed_ids.add(visual_record_id)
 
-            ##sleep to avoid quota errors
             time.sleep(API_RETRY_DELAY)
 
         except AllVisualModelsQuotaExhausted:
@@ -448,10 +378,7 @@ def run_complete_visual_analysis()->pd.DataFrame:
             break
 
         except Exception as e:
-
-            ##a bad record remains absent from the checkpoints
-            ##will be retried on next run
-
+            # a bad record stays out of the checkpoint and is retried next run
             print(f"{visual_record_id} failed with error: {type(e).__name__}: {e}")
 
     visual_analysis_df = pd.DataFrame(results)

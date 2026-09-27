@@ -4,16 +4,11 @@ from src.config import PROCESSED_DIR
 from src.discovery import (discover_lecture_assets)
 from src.extraction import extract_lecture_content
 
-##savining combined project level dataframe
-
 def save_master_dataframe(dataframe:pd.DataFrame,
                            output_path:Path) -> None:
 
-
-
     dataframe.to_csv(output_path, index=False, encoding='utf-8-sig')
 
-##extracting all lectures and meatadata
 def run_extraction_pipeline()->dict:
 
     lectures = discover_lecture_assets()
@@ -26,7 +21,6 @@ def run_extraction_pipeline()->dict:
     if not completed_lectures:
         raise ValueError("No complete lectures found")
 
-    ##colllecting outputs form every lecture
     video_records=[]
     caption_chunk_frames=[]
     transcript_frames=[]
@@ -44,8 +38,6 @@ def run_extraction_pipeline()->dict:
 
         caption_chunk_frames.append(result['caption_chunk_df'])
         transcript_frames.append(result['transcript_df'])
-        
-        ##combiniing slide text and image metadata
 
         lecture_slide_manifest = result['slide_df'].merge(
             result['slide_image_df'],
@@ -58,7 +50,6 @@ def run_extraction_pipeline()->dict:
 
         print(f"{assets.lecture_id} extraction  completed")
 
-    ##creating master dataframe
     master_video_df = pd.DataFrame(video_records)
 
     master_caption_chunk_df = pd.concat(caption_chunk_frames,ignore_index=True)
@@ -67,13 +58,10 @@ def run_extraction_pipeline()->dict:
 
     master_slide_manifest_df = pd.concat(slide_manifest_frames,ignore_index=True)
 
-
-    ##project level outpur directory
     master_output_dir = PROCESSED_DIR / "master"
 
     master_output_dir.mkdir(exist_ok=True)
 
-    ##saving only combined metadata
     save_master_dataframe(master_video_df,master_output_dir / "video_metadata.csv")
     save_master_dataframe(master_caption_chunk_df,master_output_dir / "caption_chunks.csv")
     save_master_dataframe(master_transcript_df,master_output_dir / "transcripts.csv")

@@ -1,61 +1,21 @@
-##GENERATING EMBEDDINGS FOR QUIZ AND DISCUSSION DATABASES
-import ast
+"""Generates embeddings for the quiz and discussion databases."""
 import json
 import pandas as pd
 from typing import Any
-from src.config import PROCESSED_DIR
 from src.embedding_client import embed_texts
+from src.database_io import EMBEDDING_DIR, load_database
+from src.qdrant_common import (
+    MODEL_NAME,
+    VECTOR_DIMENSIONS as EMBEDDING_DIMENSIONS,
+    parse_serialized_value,
+)
 
-DATABASE_DIR = PROCESSED_DIR / "databases"
-EMBEDDING_DIR = PROCESSED_DIR / "embeddings"
-
-MODEL_NAME ="BAAI/bge-base-en-v1.5"
-EMBEDDING_DIMENSIONS = 768
 BATCH_SIZE = 35
 
 EXPECTED_COUNT = {
     "quiz_database":456,
-    "discussion_database":570,   
+    "discussion_database":570,
 }
-
-#------------------------------------------------------------------------------
-## parsing serialzed lists and dicts into python objects
-#------------------------------------------------------------------------------
-
-def parse_serialized_value(value: Any) -> Any:
-
-    if value is None:
-        return None
-
-    if isinstance(value, (list, dict)):
-        return value
-
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        pass
-
-    if not isinstance(value, str):
-        return value
-
-    value = value.strip()
-
-    if not value:
-        return None
-
-    if value.startswith(('[', '{')):
-
-        try:
-            return ast.literal_eval(value)
-        except (SyntaxError, ValueError):
-            return value
-    
-    return value
-
-3#------------------------------------------------------------------------------
-## converting database values into readable embedding text
-#------------------------------------------------------------------------------
 
 def format_for_embedding(value: Any) -> str:
 
@@ -74,9 +34,6 @@ def format_for_embedding(value: Any) -> str:
 
     return str(value).strip()
 
-#------------------------------------------------------------------------------
-# constructing one searchable text for one quizz record
-#------------------------------------------------------------------------------
 def build_quiz_text(row:pd.Series)->str:
 
     feilds=[
@@ -93,10 +50,6 @@ def build_quiz_text(row:pd.Series)->str:
     return "\n".join(f"{label}:{formatted}"
                      for label,value in feilds
                      if (formatted:= format_for_embedding(value)))
-    
-#------------------------------------------------------------------------------
-# constructing one searchable text for one discussion record
-#------------------------------------------------------------------------------
 
 def build_discussion_text(row:pd.Series)->str:
 
@@ -115,53 +68,15 @@ def build_discussion_text(row:pd.Series)->str:
                      for label,value in feilds
                      if (formatted:= format_for_embedding(value)))
 
-#------------------------------------------------------------------------------
-##loading database and validate its required identifiers
-#------------------------------------------------------------------------------
-
-def load_and_validate_database(database_name:str)->pd.DataFrame:
-
-    database_path = DATABASE_DIR / f"{database_name}.csv"
-
-    if not database_path.exists():
-        raise FileNotFoundError(f"Database file not found: {database_path}")
-
-    database_df = pd.read_csv(database_path)
-
-    expected_count = EXPECTED_COUNT[database_name]
-
-    if len(database_df) != expected_count:
-        raise ValueError(f"Expected {expected_count} records in {database_name} database, found {len(database_df)}")
-
-    required_columns = {
-        "record_id",
-        "lecture_id",
-    }
-
-    missing_columns = required_columns - set(database_df.columns)
-
-    if missing_columns:
-        raise ValueError(f"Missing columns in {database_name} database: {missing_columns}")
-
-    if database_df['record_id'].isna().any():
-        raise ValueError(f"Missing record_id in {database_name} database")
-
-    if database_df['record_id'].duplicated().any():
-        raise ValueError(f"Duplicate record_id in {database_name} database")
-
-    if database_df['lecture_id'].isna().any():
-        raise ValueError(f"Missing lecture_id in {database_name} database")
-
-    return database_df
-
-#------------------------------------------------------------------------------
-##generating embedding and saving embeddings for one database
-#------------------------------------------------------------------------------
-
 def generate_embeddings(database_name:str,
                         content_type:str)->None:
 
-    database_df = load_and_validate_database(database_name)
+    database_df = load_database(
+        database_name,
+        required_columns={"record_id", "lecture_id"},
+        expected_count=EXPECTED_COUNT[database_name],
+        require_lecture_id=True,
+    )
 
     if content_type=="quiz":
 
@@ -190,7 +105,6 @@ def generate_embeddings(database_name:str,
 
     print(f"\n Generating {len(searchable_texts)} embeddings for {content_type}")
 
-    ##Embeds via the HF Inference API (normalized) instead of a local model.
     vectors= embed_texts(searchable_texts, batch_size=BATCH_SIZE)
 
     if vectors.shape != (len(database_df),EMBEDDING_DIMENSIONS):
@@ -223,17 +137,12 @@ def generate_embeddings(database_name:str,
     temporary_path.replace(output_path)
     print(f"Saved {len(embedding_records)} embeddings to {output_path}")
 
-#------------------------------------------------------------------------------
-#genarating quizz and discussion database
-#--------------------------------------------------------------------------------
 def main()->None:
     print('embedding via HF Inference API: ', MODEL_NAME)
 
-    ## generating embeddings for quiz database
     generate_embeddings(database_name="quiz_database",
                         content_type="quiz")
 
-    ## generating embeddings for discussion database
     generate_embeddings(database_name="discussion_database",
                         content_type="discussion")
 

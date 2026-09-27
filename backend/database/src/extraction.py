@@ -1,10 +1,4 @@
-"""
-EXTRACTING  
-Video metadata
-VTT captions
-Transcript text
-Slide text
-Slide images  """
+"""Extracts video metadata, VTT captions, transcript text, and slide text/images."""
 
 import json
 from collections import Counter
@@ -22,18 +16,10 @@ from src.config import (CAPTION_CHUNK_SIZE,CAPTION_OVERLAP_SIZE,lecture_output_d
 
 from src.discovery import LectureAssets
 
-#------------------------------------------------------------------------------
-##converting timesamp to seconds
-#------------------------------------------------------------------------------
-
 def timestamp_to_seconds(timestamp:str)->float:
     hours, minutes, seconds = map(float, timestamp.split(':'))
 
     return ((hours )* 3600 + (minutes)*60 + seconds)
-
-# ------------------------------------------------------------
-##EXTRACTING VIDEO METADATA
-#------------------------------------------------------------------------------
 
 def extract_video_metadata(lecture_id:str,
                            video_path:Path,
@@ -41,17 +27,17 @@ def extract_video_metadata(lecture_id:str,
 
     import cv2  # lazy: only needed when a video asset is supplied
 
-    video= cv2.VideoCapture(str(video_path)) ##opening and processing lec02 video
+    video= cv2.VideoCapture(str(video_path))
 
     if not video.isOpened():
         video.release()
         raise ValueError(f"Could not open the Video {video_path}")
     else:
-        frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT)) ##total no of frames
-        fps=int(video.get(cv2.CAP_PROP_FPS))  ##no of frames per second
-        width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH)) ##width of the frame
-        height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT)) ##height of the frame
-        duration_sec = frame_count/fps if fps>0 else 0  ##duration of the video
+        frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps=int(video.get(cv2.CAP_PROP_FPS))
+        width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        duration_sec = frame_count/fps if fps>0 else 0
 
     video.release()
 
@@ -65,19 +51,14 @@ def extract_video_metadata(lecture_id:str,
         "height": height,
         "duration_sec": round(duration_sec, 3),
         "file_size_bytes": video_path.stat().st_size,
-    } 
+    }
 
-    ##saving the metadata to a json file
     output_path = output_dir / f"{lecture_id}_video_metadata.json"
 
     with open(output_path, "w", encoding='utf-8') as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
     return metadata
-
-#----------------------------------------------------------
-##EXTRACTING VTT CAPTIONS
-#------------------------------------------------------------------------------
 
 def extract_vtt_captions(lecture_id:str,
                          caption_path:Path,
@@ -94,9 +75,8 @@ def extract_vtt_captions(lecture_id:str,
             continue
 
         start_seconds = timestamp_to_seconds(cap.start)
-        end_seconds = timestamp_to_seconds(cap.end) 
+        end_seconds = timestamp_to_seconds(cap.end)
 
-          ##appending to list
         cap_rows.append({
             'lecture_id':lecture_id,
             'caption_id':cap_id,
@@ -107,19 +87,13 @@ def extract_vtt_captions(lecture_id:str,
             'end_seconds':end_seconds,
             'duration_seconds':end_seconds-start_seconds,
             'word_count':len(cap_text.split()),
-        }) 
+        })
 
-    ##converting to dataframe
     cap_df = pd.DataFrame(cap_rows)
 
-    ##saving to csv
     cap_df.to_csv(output_dir / f"{lecture_id}_captions.csv", index=False, encoding='utf-8-sig')
 
     return cap_df
-
-##------------------------------------------------------------------------------
-## EXTRCTING INSTRUCTORS/SPEAKER NAMES FROM TRANSCIPT
-#------------------------------------------------------------------------------
 
 def extract_instructor(transcript_text: str, ) -> str:
 
@@ -134,14 +108,11 @@ def extract_instructor(transcript_text: str, ) -> str:
     return "; ".join(speaker for speaker,_ in speaker_counts.most_common())
 
 
-#------------------------------------------------------------------------------
-##EXTRACTING TRANSCRIPT TEXT
-#------------------------------------------------------------------------------
 def extract_transcript_text(lecture_id:str,
                             transcript_path:Path,
                             output_dir:Path)->tuple[pd.DataFrame,str]:
 
-    doc =fitz.open(transcript_path) ##opening transcript document
+    doc =fitz.open(transcript_path)
 
     rows=[]
 
@@ -164,14 +135,9 @@ def extract_transcript_text(lecture_id:str,
 
     transcript_df['instructor'] = instructor
 
-    ##saving to csv
     transcript_df.to_csv(output_dir / f"{lecture_id}_transcript.csv", index=False, encoding='utf-8-sig')
 
     return transcript_df,instructor
-
-#----------------------------------------------------------
-##return first non_empty string
-#------------------------------------------------------------------------------
 
 def first_non_empty(text:str)->str:
     for line in text.splitlines():
@@ -179,10 +145,6 @@ def first_non_empty(text:str)->str:
         if cleaned_line:
             return cleaned_line
     return ""
-
-#---------------------------------------------------------------
-## EXTRACTING SLIDE TEXT
-#------------------------------------------------------------------------------
 
 def extract_slide_text(lecture_id:str,
                        slide_path:Path,
@@ -196,9 +158,7 @@ def extract_slide_text(lecture_id:str,
 
     with fitz.open(slide_path) as doc:
 
-        ##extracting first page and thrid page
-        ##for lecture-level title/topic metadata
-
+        # first page usually has the lecture title, third page the topic
         first_page_text = (doc[0].get_text('text').strip() if len(doc)>0 else "")
         third_page_text = (doc[2].get_text('text').strip() if len(doc)>2 else "")
 
@@ -224,7 +184,6 @@ def extract_slide_text(lecture_id:str,
             image_file_name = f"{lecture_id}_slide_{slide_no:03d}.png"
             image_path = slide_image_dir / image_file_name
 
-            ##avoiding saving duplicate images
             if image_path.exists():
 
                 import cv2  # lazy: only when re-reading an already-rendered slide image
@@ -253,8 +212,6 @@ def extract_slide_text(lecture_id:str,
                 'image_size_bytes':image_path.stat().st_size,
             })
 
-    ##creating dataframes
-
     slide_df = pd.DataFrame(slide_records)
 
     slide_image_df = pd.DataFrame(image_records)
@@ -264,10 +221,6 @@ def extract_slide_text(lecture_id:str,
 
     return slide_df,slide_image_df
 
-
-##----`-------------------------------------------------------------------
-# COMIBNE CAPITONS INTO CHUNKS
-#------------------------------------------------------------------------------
 
 def create_caption_chunks(caption_df:pd.DataFrame,
                           output_dir:Path,
@@ -289,16 +242,14 @@ def create_caption_chunks(caption_df:pd.DataFrame,
 
     while start_index < total_captions:
 
-        end_index = start_index 
+        end_index = start_index
         curr_word_count = 0
 
-    ##finding the end of the chunk
         while (end_index < total_captions and curr_word_count < target_words):
             curr_word_count += int(caption_df.loc[end_index,'word_count'])
             end_index += 1
 
-        ###end index is exclusive
-
+        # end_index is exclusive
         final_index = end_index-1
 
         chunk_captions = caption_df.iloc[start_index:end_index]
@@ -334,11 +285,6 @@ def create_caption_chunks(caption_df:pd.DataFrame,
     caption_chunk_df.to_csv(output_dir / f"{lecture_id}_caption_chunks.csv", index=False, encoding='utf-8-sig')
     return caption_chunk_df
 
-
-
-#----------------------------------------------------------
-## RUNNING EXTRACTIONS
-#------------------------------------------------------------------------------
 
 def extract_lecture_content(
         assets:LectureAssets,) -> dict:
