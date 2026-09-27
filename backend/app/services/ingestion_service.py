@@ -110,7 +110,7 @@ class IngestionJobManager:
                     stage="done",
                     progress=1.0,
                     lecture_id=lecture_id if lecture_id != "unknown" else job_id[:8],
-                    course_id="deeplearning",
+                    course_id="unknown",
                     message="Ingestion complete (restored from disk)",
                     created_at=mtime,
                     updated_at=mtime,

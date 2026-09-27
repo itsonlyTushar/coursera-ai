@@ -1,0 +1,1 @@
+"""Supabase PostgREST integration components."""

@@ -232,10 +232,10 @@ backend/database/**/*.py[cod]
 backend/database/.pytest_cache/
 
 # Raw course data
-backend/database/deeplearning/
+backend/database/Intro_to_bio/
 backend/database/data/
 
-# Locally staged course material for online ingestion (README.md stays tracked)
+# Locally staged course material for online ingestion
 backend/database/courses/*/
 
 # Generated outputs
@@ -257,3 +257,8 @@ backend/database/**/*.jpeg
 
 # Locally generated manifests
 backend/database/manifests/
+
+# MY AI WORKSPACE 
+.agents
+.claude
+skills-lock.json

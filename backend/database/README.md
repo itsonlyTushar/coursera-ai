@@ -138,7 +138,7 @@ backend/database/
 | `quiz_discussion_qdrant.py` | Integrates quiz and discussion points |
 | `visual_asset_qdrant.py` | Adds Hugging Face visual-asset references to existing slide and frame payloads |
 | `validation.py` | Validates databases, embeddings and outputs |
-| `pipeline.py` | Coordinates major pipeline stages |
+| `pipeline.py` | Runs discovery and extraction, writing master CSVs to `processed/master/`. Visual analysis, embedding, and Qdrant/HF upload are separate steps, run individually (see sections 19, 22). |
 
 The repository contains pipeline code only. Raw files and generated outputs are stored locally or in approved shared storage.
 
@@ -633,9 +633,9 @@ Distance metric: Cosine
 ```
 
 Embeddings are generated via the **Hugging Face Inference API** (`src/embedding_client.py`),
-not a local model — no torch/`sentence-transformers` download, works on any machine with an
-`HF_TOKEN`. This is the same model the backend uses for query embeddings, so document and
-query vectors stay consistent.
+not a local model, so no torch or `sentence-transformers` download is needed; it works on any
+machine with an `HF_TOKEN`. This is the same model the backend uses for query embeddings, so
+document and query vectors stay consistent.
 
 ### Text Used for Embedding
 
@@ -1155,7 +1155,7 @@ Completed:
 - End-to-end Qdrant-to-private-asset access validation
 - Backend Qdrant access handoff
 
-Current validated Qdrant total:
+Current validated Qdrant total: 5,285 points (see section 23).
 
 ## 31. Application Database and Analytics
 
@@ -1256,7 +1256,7 @@ SUPABASE_SECRET_KEY=
 
 ### Backend Database Access
 
-The live backend does not use a `database/src` Supabase helper — persistence is owned
+The live backend does not use a `database/src` Supabase helper. Persistence is owned
 entirely by [`app/services/supabase_service.py`](../app/services/supabase_service.py)
 (`SupabaseService`), a pooled `httpx` client talking to Supabase's PostgREST API. This
 `database/` package's own Supabase touchpoint is only the SQL schema below; there is no

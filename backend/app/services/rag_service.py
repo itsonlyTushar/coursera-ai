@@ -12,21 +12,21 @@ from app.core.logging import get_logger
 from app.schemas import (
     Citation,
     ConversationCreateRequest,
-    EvidenceContext,
     EvidenceSaveItem,
     InteractionSaveRequest,
     SynthesizeRequest,
     SynthesizeResponse,
 )
+from app.services.rag_mapping import (
+    _chunk_to_context,
+    _context_to_chunk,
+    _context_to_evidence,
+    _preview,
+)
 from app.services.supabase_service import SupabaseService
 
 
 logger = get_logger(__name__)
-
-# retrieval_evidence.content_type has a DB CHECK constraint limited to this set,
-# so any other modality must be normalized before it is persisted.
-_ALLOWED_CONTENT_TYPES = {"caption", "slide", "frame", "transcript", "quiz", "discussion"}
-
 
 class RagService:
     def __init__(self, settings: Settings) -> None:
@@ -41,7 +41,7 @@ class RagService:
     ) -> tuple[SynthesizeResponse, list[EvidenceSaveItem], str]:
         # Runs retrieval + LLM synthesis and shapes the result for the API and for persistence in one pass.
         chunks = (
-            [self._context_to_chunk(item) for item in request.retrieved_evidence]
+            [_context_to_chunk(item) for item in request.retrieved_evidence]
             if request.retrieved_evidence
             else self.retrieve_chunks(query=request.query, top_k=request.top_k)
         )
@@ -68,9 +68,9 @@ class RagService:
             )
             for item in insight.evidence
         ]
-        context_items = [self._chunk_to_context(chunk) for chunk in chunks]
+        context_items = [_chunk_to_context(chunk) for chunk in chunks]
         evidence = [
-            self._context_to_evidence(item, rank)
+            _context_to_evidence(item, rank)
             for rank, item in enumerate(context_items, start=1)
         ]
 
@@ -90,8 +90,8 @@ class RagService:
         self, request: SynthesizeRequest, supabase_service: SupabaseService
     ) -> SynthesizeResponse:
         # Orchestrates the full /synthesize flow: run the RAG pipeline, then persist the
-        # query/answer/evidence (creating a conversation if none was supplied). Keeps the
-        # HTTP route thin — validation and dependency injection only, no business logic.
+        # query/answer/evidence (creating a conversation if none was supplied). This keeps
+        # the HTTP route thin, doing only validation and dependency injection.
         response, evidence, answer_text = self.synthesize(request)
 
         conversation_id = request.conversation_id
@@ -183,88 +183,6 @@ class RagService:
                 status_code=503,
                 detail=f"{name} is required for {purpose}. Add it to backend/.env.",
             )
-
-    # --- Shape mapping --------------------------------------------------
-    def _chunk_to_context(self, chunk: dict[str, Any]) -> EvidenceContext:
-        # Converts a raw pipeline chunk into the API's EvidenceContext so responses have a stable schema.
-        source_id = _optional_str(chunk.get("source_id"))
-        content_type = _content_type(chunk.get("modality"))
-        return EvidenceContext(
-            point_id=str(chunk.get("segment_id", "")),
-            score=float(chunk.get("score", 0.0)),
-            source_id=source_id,
-            asset_id=source_id,
-            content_type=content_type,
-            lecture_id=source_id,
-            timestamp=_optional_str(chunk.get("timestamp")),
-            text=str(chunk.get("excerpt", "")),
-            payload={
-                "source_id": chunk.get("source_id"),
-                "content_type": content_type,
-                "timestamp": chunk.get("timestamp"),
-            },
-        )
-
-    def _context_to_chunk(self, item: EvidenceContext) -> dict[str, Any]:
-        # Converts client-supplied evidence back into a pipeline chunk so synthesis can reuse pre-fetched context.
-        return {
-            "segment_id": item.point_id,
-            "source_id": item.source_id or item.asset_id or item.lecture_id or item.point_id,
-            "modality": item.content_type or "text",
-            "timestamp": item.timestamp or "",
-            "excerpt": item.text,
-            "score": item.score or 0.0,
-        }
-
-    def _context_to_evidence(self, item: EvidenceContext, rank: int) -> EvidenceSaveItem:
-        # Maps evidence into the persistence shape (with rank) so it can be stored against the generated response.
-        payload = item.payload or {}
-        return EvidenceSaveItem(
-            point_id=item.point_id,
-            content_type=_content_type(item.content_type),
-            lecture_id=item.lecture_id,
-            module_id=_optional_str(payload.get("module_id")),
-            score=item.score,
-            retrieval_rank=rank,
-            text=item.text,
-            asset_path=_optional_str(payload.get("asset_path")),
-            timestamp_seconds=_timestamp_seconds(payload),
-            metadata={
-                "source_id": item.source_id,
-                "asset_id": item.asset_id,
-                "course_id": item.course_id,
-                "provider": "rag",
-            },
-        )
-
-
-def _preview(value: str, limit: int) -> str:
-    # Collapses whitespace and truncates text so citation previews stay short and single-line.
-    text = " ".join((value or "").split())
-    if len(text) <= limit:
-        return text
-    return text[: limit - 3].rstrip() + "..."
-
-
-def _optional_str(value: Any) -> str | None:
-    # Stringifies a value while preserving None so optional fields don't become the literal "None".
-    return None if value is None else str(value)
-
-
-def _content_type(value: Any) -> str:
-    # Coerces any modality to a DB-allowed content_type so persistence never violates the CHECK constraint.
-    content_type = str(value) if value is not None else ""
-    return content_type if content_type in _ALLOWED_CONTENT_TYPES else "caption"
-
-
-def _timestamp_seconds(payload: dict[str, Any]) -> float | None:
-    # Extracts a numeric timestamp from payload variants so evidence carries a usable start time when available.
-    value = payload.get("timestamp_seconds") or payload.get("start_seconds")
-    try:
-        return float(value) if value is not None else None
-    except (TypeError, ValueError):
-        return None
-
 
 @lru_cache
 def get_rag_service() -> RagService:

@@ -9,8 +9,8 @@ from app.services.supabase_service import get_supabase_service
 
 
 class FakeRagService(RagService):
-    # A real RagService (so synthesize_and_record's orchestration — conversation creation,
-    # save_interaction, id wiring — is genuinely exercised by these tests) with only the
+    # A real RagService, so synthesize_and_record's orchestration (conversation creation,
+    # save_interaction, id wiring) is genuinely exercised by these tests, with only the
     # expensive synthesize() pipeline call stubbed out to avoid needing Qdrant/Groq.
     def __init__(self):
         pass  # skip RagService.__init__: unused by synthesize()/synthesize_and_record() here

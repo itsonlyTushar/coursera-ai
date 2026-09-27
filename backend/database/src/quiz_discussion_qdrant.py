@@ -1,7 +1,6 @@
 ##uploading quizz and discussion records to qdrant
 import ast
 import json
-from pathlib import Path
 import os
 import uuid
 from typing import Any

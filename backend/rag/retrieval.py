@@ -139,7 +139,8 @@ class RetrievalPipeline:
         return standardized_chunks
 
     def _hydrate_payloads(self, docs: list[Document]) -> list[Document]:
-        # Refetches full Qdrant payloads for the hits so downstream code has complete metadata/text, not just the vector match.
+        # Refetches full Qdrant payloads for the hits, since the raw vector match alone
+        # lacks the complete metadata and text downstream code needs.
         point_ids = [
             doc.metadata.get("_id")
             for doc in docs

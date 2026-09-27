@@ -3,30 +3,30 @@
 The rest of the ``database`` package is a whole-course batch pipeline that scans
 fixed folders and aggregates every lecture at once. This module exposes a single
 callable that ingests ONE lecture (or lecture-like unit, e.g. "readings" or
-"syllabus") from whichever assets were actually provided — extract → Gemini
-visual analysis (slides only) → API embeddings → Qdrant upsert — writing only
-inside a caller-provided working directory. The backend calls it as a
-background job.
+"syllabus") from whichever assets were actually provided. It runs extraction,
+then Gemini visual analysis on slides, then API embeddings, then a Qdrant
+upsert, writing only inside a caller-provided working directory. The backend
+calls it as a background job.
 
-It deliberately reuses the granular, path-parameterized building blocks
-(extraction sub-functions, ``analyse_image``, ``combine_searchable_fields`` and
-the Qdrant helpers) so the points it upserts are identical in id and payload
-shape to the batch pipeline's.
+It reuses the granular, path-parameterized building blocks (extraction
+sub-functions, ``analyse_image``, ``combine_searchable_fields``, and the
+Qdrant helpers) so the points it upserts match the batch pipeline's in id
+and payload shape.
 
 Scope: captions (.vtt/.srt), slides (.pdf), transcript (.pdf/.md/.txt),
 discussion notes (.md/.txt), and a quiz/exam question set with its solutions
-(.pdf/.md/.txt each) — ALL optional, but at least one is required. The
-project's purpose is finding where students struggle, which means the full
-course surface matters, not just lecture content: not every course ships
-slides + synced captions, and exam/assignment questions plus their official
-solutions are exactly the kind of evidence (expected answer vs. discussion
-confusion) the RAG layer needs. Quiz questions and solutions both use the
-``quiz`` content_type (already valid end to end — Qdrant payload, the RAG
-service's normalizer, and the Supabase DB constraint) and are distinguished
-by a ``role`` payload field ("question"/"solution") rather than a separate
-content_type, since the DB only allows a fixed set of values. No video —
-video/frame handling is out of scope for the online tool (it stays in the
-offline batch pipeline). Slide images are kept on local disk for this job;
+(.pdf/.md/.txt each). All are optional, but at least one is required. Since
+the project's purpose is finding where students struggle, the full course
+surface matters: many courses lack slides or synced captions, and exam or
+assignment questions plus their official solutions are the kind of evidence
+(expected answer vs. discussion confusion) the RAG layer needs. Quiz
+questions and solutions both use the ``quiz`` content_type and are
+distinguished by a ``role`` payload field ("question"/"solution") rather than
+a separate content_type, since the DB only allows a fixed set of values; the
+content_type is already valid end to end across the Qdrant payload, the RAG
+service's normalizer, and the Supabase DB constraint. Video and frame
+handling stays out of scope for the online tool and lives in the offline
+batch pipeline instead. Slide images are kept on local disk for this job;
 uploading them to the private HF visual dataset is a separate step.
 """
 from __future__ import annotations
@@ -59,8 +59,8 @@ from src.visual_database import combine_searchable_fields
 
 ProgressCallback = Callable[[str, float, str], None]
 
-# Words per chunk for plain-text assets (transcript/discussion) — similar
-# granularity to caption chunking so each embedding stays a focused, citable unit.
+# Words per chunk for plain-text assets (transcript/discussion), matching caption
+# chunking's granularity so each embedding stays a focused, citable unit.
 TEXT_CHUNK_WORDS = 220
 
 
@@ -146,9 +146,9 @@ def _build_text_records(
     role: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     # Chunks plain text (transcript, discussion notes, or quiz question/solution text) into
-    # records of the given content_type, embedded and upserted exactly like captions/slides —
-    # not just extracted and discarded. `id_prefix` lets two asset kinds share one content_type
-    # (quiz questions vs. solutions) without colliding record ids; `role` tags which is which.
+    # records of the given content_type, embedded and upserted exactly like captions/slides.
+    # `id_prefix` lets two asset kinds share one content_type (quiz questions vs. solutions)
+    # without colliding record ids; `role` tags which is which.
     slug = lecture_id.upper()
     prefix = (id_prefix or content_type).upper()
     chunks = _chunk_plain_text(text)

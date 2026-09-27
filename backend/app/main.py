@@ -13,7 +13,6 @@ app = FastAPI(
     title="Coursera Multimodal Intelligence Backend",
     description="Backend API for RAG retrieval/synthesis orchestration and persistence.",
     version="0.3.0",
-    # Interactive API docs are disabled (no Swagger UI, ReDoc, or OpenAPI schema route).
     docs_url=None,
     redoc_url=None,
     openapi_url=None,

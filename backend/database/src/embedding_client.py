@@ -1,11 +1,11 @@
 """API-based text embeddings for the ingestion pipeline.
 
 Replaces the heavy local ``sentence-transformers`` model with the Hugging Face
-Inference API. This is the SAME model + client the backend uses for query
+Inference API. This is the SAME model and client the backend uses for query
 embeddings (``HuggingFaceEndpointEmbeddings`` on ``BAAI/bge-base-en-v1.5``), so
 document vectors produced here stay directly comparable to backend query vectors
-in Qdrant's cosine space — no local model download, no torch, works on any
-machine with an ``HF_TOKEN``.
+in Qdrant's cosine space. No local model download or torch install is needed;
+it works on any machine with an ``HF_TOKEN``.
 """
 import os
 import time

@@ -1,4 +1,4 @@
-# Vector store & embeddings (serverless HF Inference — no local model download)
+# Vector store & embeddings (serverless HF Inference, no local model download)
 qdrant-client>=1.9.0
 langchain-core>=0.3.0
 langchain-qdrant>=0.1.4
