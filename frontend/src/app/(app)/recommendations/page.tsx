@@ -32,6 +32,8 @@ export default function RecommendationsPage() {
     data: rawRecommendations = [],
     isLoading,
     isFetching,
+    isError,
+    refetch,
   } = useRecommendations({ page, pageSize: PAGE_SIZE });
 
   const reviewFeedback = useReviewFeedback();
@@ -117,6 +119,8 @@ export default function RecommendationsPage() {
       <RecommendationsGrid
         recommendations={filteredRecommendations}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         searchQuery={searchQuery}
         onSelectRecommendation={handleSelectRecommendation}
       />

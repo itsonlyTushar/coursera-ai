@@ -1,5 +1,6 @@
 # Retrieval of relevant documents from Database using Vector Search and Cohere Reranking
 import os
+from pathlib import Path
 from typing import Any, List
 from dotenv import load_dotenv
 
@@ -9,6 +10,8 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_cohere import CohereRerank
 from langchain_core.documents import Document
 
+_BACKEND_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(_BACKEND_DIR / ".env")
 load_dotenv()
 
 

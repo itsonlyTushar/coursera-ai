@@ -58,10 +58,10 @@ class QdrantService:
             collection = self.client.get_collection(self.settings.qdrant_collection)
         except UnexpectedResponse as exc:
             logger.error("Qdrant returned an error for get_collection: %s", exc)
-            raise HTTPException(status_code=502, detail="Could not read the Qdrant collection.") from exc
+            raise HTTPException(status_code=502, detail=f"Could not read the Qdrant collection: {exc}") from exc
         except Exception as exc:
             logger.error("Could not reach Qdrant: %s", exc)
-            raise HTTPException(status_code=502, detail="Could not reach the vector store.") from exc
+            raise HTTPException(status_code=502, detail=f"Could not reach the vector store: {exc}") from exc
 
         return CollectionResponse(
             collection_name=self.settings.qdrant_collection,
@@ -89,7 +89,7 @@ class QdrantService:
                 )
             except Exception as exc:
                 logger.error("Could not scan Qdrant records: %s", exc)
-                raise HTTPException(status_code=502, detail="Could not scan the vector store.") from exc
+                raise HTTPException(status_code=502, detail=f"Could not scan the vector store: {exc}") from exc
 
             if not points:
                 break

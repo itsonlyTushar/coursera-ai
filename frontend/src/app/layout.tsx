@@ -4,6 +4,7 @@ import "./globals.css";
 import { inter, sora } from "@/constants/fonts-config";
 import QueryProvider from "@/lib/query-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { ServerErrorDialog } from "@/components/server-error-dialog";
 
 // METADATA
 export const metadata: Metadata = {
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <QueryProvider>
           {children}
+          <ServerErrorDialog />
           <Toaster />
         </QueryProvider>
       </body>
