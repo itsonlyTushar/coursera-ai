@@ -2,12 +2,15 @@
 
 import React from "react";
 import { Recommendation } from "@/types";
-import { Spinner } from "@/components/ui/spinner";
+import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { RecommendationCard } from "./recommendation-card";
 
 interface RecommendationsGridProps {
   recommendations: Recommendation[];
   isLoading: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   searchQuery?: string;
   onSelectRecommendation: (item: Recommendation) => void;
 }
@@ -15,6 +18,8 @@ interface RecommendationsGridProps {
 export function RecommendationsGrid({
   recommendations,
   isLoading,
+  isError = false,
+  onRetry,
   searchQuery = "",
   onSelectRecommendation,
 }: RecommendationsGridProps) {
@@ -23,6 +28,29 @@ export function RecommendationsGrid({
       <div className="flex items-center justify-center py-16 gap-2 text-sm text-muted-foreground">
         <Spinner className="h-4 w-4 text-muted-foreground" />
         <span>Loading curated recommendations...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3 text-center border border-dashed border-border/80 rounded-xl bg-card/40 p-8">
+        <div className="h-10 w-10 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+          <AlertTriangle className="h-5 w-5" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Unable to load recommendations
+          </p>
+          <p className="text-xs text-muted-foreground max-w-sm">
+            We ran into a problem connecting to the server. Please visit after some time.
+          </p>
+        </div>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry} className="mt-2">
+            Try again
+          </Button>
+        )}
       </div>
     );
   }

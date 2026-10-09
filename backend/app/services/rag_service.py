@@ -51,7 +51,7 @@ class RagService:
             insight = synthesize_insight(query=request.query, reranked_chunks=chunks)
         except Exception as exc:
             logger.error("RAG synthesis failed: %s", exc)
-            raise HTTPException(status_code=503, detail="RAG synthesis failed.") from exc
+            raise HTTPException(status_code=503, detail=f"RAG synthesis failed: {exc}") from exc
 
         answer_text = (
             f"Summary: {insight.summary}\n\n"
@@ -137,7 +137,7 @@ class RagService:
             return pipeline.retrieve_and_rerank(query=query, top_k=top_k)
         except Exception as exc:
             logger.error("RAG retrieval failed: %s", exc)
-            raise HTTPException(status_code=503, detail="RAG retrieval failed.") from exc
+            raise HTTPException(status_code=503, detail=f"RAG retrieval failed: {exc}") from exc
 
     # --- Lazy imports of the standalone rag package ---------------------
     def _load_pipeline(self) -> Any:
@@ -146,11 +146,17 @@ class RagService:
             return self._pipeline
 
         self._prepare_rag_imports()
+        self._assert_env("QDRANT_URL", "Qdrant vector store")
+        if not (os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")):
+            raise HTTPException(
+                status_code=503,
+                detail="HF_TOKEN is required for RAG embeddings. Add it to backend/.env.",
+            )
         try:
             from rag.retrieval import pipeline
         except Exception as exc:
             logger.error("Could not import rag retrieval pipeline: %s", exc)
-            raise HTTPException(status_code=503, detail="Retrieval pipeline unavailable.") from exc
+            raise HTTPException(status_code=503, detail=f"Retrieval pipeline unavailable: {exc}") from exc
 
         self._pipeline = pipeline
         return self._pipeline
@@ -166,7 +172,7 @@ class RagService:
             from rag.synthesis import synthesize_insight
         except Exception as exc:
             logger.error("Could not import rag synthesis: %s", exc)
-            raise HTTPException(status_code=503, detail="Synthesis pipeline unavailable.") from exc
+            raise HTTPException(status_code=503, detail=f"Synthesis pipeline unavailable: {exc}") from exc
 
         self._synthesize_insight = synthesize_insight
         return self._synthesize_insight

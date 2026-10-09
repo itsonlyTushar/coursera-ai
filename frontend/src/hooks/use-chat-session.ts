@@ -141,7 +141,8 @@ export function useChatSession(): UseChatSessionReturn {
               ...prev,
               {
                 role: "assistant",
-                content: "Something went wrong. Please try again.",
+                content:
+                  "We ran into a problem connecting to the server. Please visit after some time.",
               },
             ]);
           },

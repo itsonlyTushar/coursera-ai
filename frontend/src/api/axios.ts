@@ -1,4 +1,5 @@
 import axios from "axios";
+import { serverErrorStore } from "@/lib/server-error";
 
 const RAW_API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -89,6 +90,36 @@ api.interceptors.response.use(
       );
     } else {
       console.error(`❌ [API Error] ${error.message}`, error);
+    }
+
+    const status = error.response?.status;
+    const isServerError =
+      (typeof status === "number" && status >= 500) ||
+      error.code === "ECONNABORTED" ||
+      error.code === "ERR_NETWORK" ||
+      (!error.response && error.request);
+
+    if (isServerError) {
+      let detail =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.message ||
+        "The server is temporarily unreachable.";
+
+      if (typeof detail !== "string") {
+        try {
+          detail = JSON.stringify(detail);
+        } catch {
+          detail = "Server error occurred.";
+        }
+      }
+
+      serverErrorStore.trigger({
+        status,
+        message: "We ran into a problem. Please visit after some time.",
+        detail,
+        url: url,
+      });
     }
 
     return Promise.reject(error);

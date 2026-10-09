@@ -46,7 +46,10 @@ class PostgrestClient:
             response = self._client.request(method, path, headers=headers, json=json)
         except httpx.HTTPError as exc:
             logger.error("Supabase request failed (%s %s): %s", method, path, exc)
-            raise HTTPException(status_code=502, detail="Persistence backend is unreachable.") from exc
+            raise HTTPException(
+                status_code=502,
+                detail=f"Persistence backend is unreachable: {exc}",
+            ) from exc
 
         if response.status_code >= 400:
             logger.error(
@@ -58,7 +61,7 @@ class PostgrestClient:
             )
             raise HTTPException(
                 status_code=response.status_code,
-                detail="Persistence backend rejected the request.",
+                detail=f"Persistence backend rejected the request ({response.status_code}): {response.text}",
             )
 
         if not response.content:
