@@ -4,6 +4,7 @@ import React from "react";
 import { Recommendation } from "@/types";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { RecommendationCard } from "./recommendation-card";
 
 interface RecommendationsGridProps {
